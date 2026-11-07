@@ -464,20 +464,49 @@ let shell = null, ncol = 0;
 
 class Room {
   constructor(slot, dept) {
-    this.slot = slot; this.dept = dept;
-    this.col = Math.floor(slot / 2); this.side = slot % 2 === 0 ? -1 : 1;
-    this.cx = this.col * RW + RW / 2;
+    this.dept = dept;
     this.g = new THREE.Group();
-    this.g.position.set(this.cx, 0, this.side * CW / 2);
-    this.g.rotation.y = this.side > 0 ? 0 : Math.PI;
-    this.g.updateMatrixWorld(true);
+    this.dat(slot);
     scene.add(this.g);
     this.desks = []; this.stand = []; this.racks = []; this.binders = 0; this.today = 0;
     if (dept) this.build(); else this.buildMeeting();
   }
+  // o 0-1 sat phong Sep (cot dong nhat), o cang lon cang ve phia sanh
+  dat(slot) {
+    this.slot = slot;
+    this.col = ncol - 1 - Math.floor(slot / 2); this.side = slot % 2 === 0 ? -1 : 1;
+    this.cx = this.col * RW + RW / 2;
+    this.g.position.set(this.cx, 0, this.side * CW / 2);
+    this.g.rotation.y = this.side > 0 ? 0 : Math.PI;
+    this.g.updateMatrixWorld(true);
+  }
+  // doi phong sang o khac: chuyen ca tuong va cham, ly ca phe, nguoi dang o trong; ai dang di toi phong thi tinh lai duong
+  doi(slot) {
+    const trong = p => { const [u, v] = this.local(p); return Math.abs(u) < RW / 2 && v > -.15 && v < RD; };
+    const ws = [...workers.values()], o = ws.filter(w => trong(w.root.position));
+    const sep = director && trong(director.root.position);
+    const M0 = this.g.matrixWorld.clone().invert(), s0 = this.side;
+    this.dat(slot);
+    const T = this.g.matrixWorld.clone().multiply(M0), quay = this.side !== s0 ? Math.PI : 0;
+    for (const w of WALLS) if (w.own === this) {
+      const a = new V3(w.x0, 0, w.z0).applyMatrix4(T), b = new V3(w.x1, 0, w.z1).applyMatrix4(T);
+      w.x0 = Math.min(a.x, b.x); w.x1 = Math.max(a.x, b.x); w.z0 = Math.min(a.z, b.z); w.z1 = Math.max(a.z, b.z);
+    }
+    for (const c of cutWalls) if (c.room === this) c.side = this.side;
+    for (const d of [...this.desks, this.lead]) if (d && d.mug) d.mug.applyMatrix4(T);
+    for (const w of o) { w.root.position.applyMatrix4(T); w.root.rotation.y += quay; if (w.yawNow !== undefined) w.yawNow += quay; }
+    for (const w of ws) {
+      const st = w.step;
+      if (st && st.k === "walk" && st.path && (o.includes(w) || st.spot.room === this)) { st.path = route(w.root.position, null, st.spot); st.i = 0; }
+    }
+    if (director) {
+      if (sep) { director.root.position.applyMatrix4(T); director.yawNow = (director.yawNow || 0) + quay; }
+      if (director.path && director.target && (sep || director.target.spot.room === this)) { director.path = route(director.root.position, null, director.target.spot); director.pi = 0; }
+    }
+  }
   w(u, v, y = 0) { return this.g.localToWorld(new V3(u, y, v)); }
   yaw(du, dv) { const s = this.side > 0 ? 1 : -1; return Math.atan2(du * s, dv * s); }
-  spot(u, v, du, dv, via, extra = {}) { return { room: this, pos: [u, v], yaw: this.yaw(du, dv), via, ...extra }; }
+  spot(u, v, du, dv, via, extra = {}) { const room = this; return { room, pos: [u, v], get yaw() { return room.yaw(du, dv); }, via, ...extra }; }   // yaw tinh lai khi phong doi day
   local(p) { const l = this.g.worldToLocal(p.clone()); return [l.x, l.z]; }
   exitPts() { return [this.w(DOOR_U, LANE_V), this.w(DOOR_U, .25), this.w(DOOR_U, -.75)]; }
   enterPts() { return this.exitPts().reverse(); }
@@ -1887,12 +1916,25 @@ function ensureRoom(dept) {
   const slot = realRooms().length;
   for (let i = rooms.length - 1; i >= 0; i--) if (!rooms[i].dept && rooms[i].slot === slot) { const old = rooms[i]; WALLS = WALLS.filter(w => w.own !== old); scene.remove(old.g); rooms.splice(i, 1); }
   for (let i = cutWalls.length - 1; i >= 0; i--) if (cutWalls[i].room && !cutWalls[i].room.dept && cutWalls[i].room.slot === slot) cutWalls.splice(i, 1);
+  // them cot: cac phong cu lui ve phia sanh mot cot, phong Sep dich ra xa (dung lai vo nha)
+  const nc = Math.max(1, Math.ceil((slot + 1) / 2)), them = nc !== ncol;
+  if (them) { ncol = nc; for (const r of realRooms()) r.doi(r.slot); }
   const rm = new Room(slot, dept);
   rooms.push(rm); roomBy[dept] = rm;
-  const nc = Math.max(1, Math.ceil(realRooms().length / 2));
-  if (nc !== ncol) { ncol = nc; buildShell(); }
+  if (them) buildShell(); else buildVangDen(ncol * RW + GW);
   renderRoomList();
   return rm;
+}
+// hoan doi 2 phong: dua a ra o tam xa tit truoc, khong thi nguoi vua chuyen sang bi phong kia keo ve lan nua
+function doiCho(a, b) { const sa = a.slot, sb = b.slot; a.doi(1000); b.doi(sa); a.doi(sb); }
+// phong co nguoi dang chay viec / cho duyet -> chiem cac o sat phong Sep (o 0..k-1); doi cho it nhat co the
+function xepPhong(ban) {
+  const rs = realRooms(), k = rs.filter(r => ban.has(r.dept)).length;
+  const xa = rs.filter(r => ban.has(r.dept) && r.slot >= k).sort((a, b) => a.slot - b.slot);
+  const nhuong = rs.filter(r => !ban.has(r.dept) && r.slot < k).sort((a, b) => b.slot - a.slot);
+  if (!xa.length) return;
+  xa.forEach((r, i) => doiCho(r, nhuong[i]));
+  buildVangDen(ncol * RW + GW); renderRoomList();
 }
 const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d / 1000; };
 function sync() {
@@ -1906,6 +1948,7 @@ function sync() {
   }
   Object.keys(score).sort((x, y) => score[y] - score[x]).forEach(ensureRoom);
   if (!ncol) { ncol = 1; buildShell(); }
+  xepPhong(new Set(all.filter(a => a.dept && (a.status === "chay" || a.status === "cho")).map(a => a.dept)));
   // ke ho so: so cong don trong kho SQLite (S.shelves); ho so con tren tay nhan vien thi chua tinh
   const shelves = shelvesOf(S);
   for (const rm of realRooms()) {
@@ -2283,7 +2326,10 @@ const timer = new THREE.Timer();
 window.__vpNhin = (px, py, pz, tx, ty, tz) => { fly = null; follow(null); controls.target.set(tx, ty, tz); camera.position.set(px, py, pz); controls.update(); };
 window.__vpRoomba = () => ({ x: roomba.g.position.x, z: roomba.g.position.z, tt: roomba.tt });
 window.__vpBan = (ir, id, du = -1.3, dv = 1.6, h = 1.9) => { const rm = realRooms()[ir], d = rm && rm.desks[id]; if (!d) return null; const p = rm.w(d.ghe.x + du, d.ghe.z + dv, h), q = rm.w(d.ghe.x + .9, d.ghe.z, .8); window.__vpNhin(p.x, p.y, p.z, q.x, q.y, q.z); return rm.desks.length; };
-window.__vpThu = { loi: () => { const w = window.__vpThu.w; if (w) { w.a = { ...w.a, status: "loi" }; } }, nguoi: () => { const w = window.__vpThu.w = [...workers.values()].find(x => x.a.status === "loi" && x.mode === "desk") || [...workers.values()].find(x => x.anim === "type"); if (!w) return null; const p = w.root.localToWorld(new V3(1.8, 2.3, 2.3)), q = w.root.position; window.__vpNhin(p.x, p.y, p.z, q.x, 1.6, q.z); return w.a.status + "/" + w.anim; }, phao: () => { const w = window.__vpThu.w || [...workers.values()][0]; if (w) phaoGiay(w.root.position, 40); }, in: () => mayIn.in(), tour: () => tourBat(true) };
+window.__vpThu = { loi: () => { const w = window.__vpThu.w; if (w) { w.a = { ...w.a, status: "loi" }; } }, nguoi: () => { const w = window.__vpThu.w = [...workers.values()].find(x => x.a.status === "loi" && x.mode === "desk") || [...workers.values()].find(x => x.anim === "type"); if (!w) return null; const p = w.root.localToWorld(new V3(1.8, 2.3, 2.3)), q = w.root.position; window.__vpNhin(p.x, p.y, p.z, q.x, 1.6, q.z); return w.a.status + "/" + w.anim; }, phao: () => { const w = window.__vpThu.w || [...workers.values()][0]; if (w) phaoGiay(w.root.position, 40); }, in: () => mayIn.in(), tour: () => tourBat(true),
+  phong: () => realRooms().map(r => ({ dept: r.dept, slot: r.slot, col: r.col, side: r.side, chay: [...workers.values()].some(w => w.room() === r && (w.a.status === "chay" || w.a.status === "cho")) })),
+  lech: () => [...workers.values()].filter(w => w.mode === "desk" && w.slot && w.spot === w.slot.spot && w.step && w.step.k !== "walk").map(w => +w.root.position.distanceTo(w.spot.room.w(...w.spot.pos)).toFixed(2)),
+  doi: (i, j) => { doiCho(realRooms()[i], realRooms()[j]); buildVangDen(ncol * RW + GW); } };
 window.__vpNhinGD = (dx, z, h = 3, d = 4) => { fly = null; follow(null); controls.target.set(GD.x0 + dx, .6, z); camera.position.set(GD.x0 + dx - d * .6, h, z + d * .8); controls.update(); };
 // so lieu chan doan (bo nho GPU, so nhan vien) — goi tu console / kiem tu dong: window.__vpChanDoan()
 window.__vpChanDoan = () => ({ ...renderer.info.memory, calls: lastCalls, tris: lastTris, programs: (renderer.info.programs || []).length, workers: workers.size,
