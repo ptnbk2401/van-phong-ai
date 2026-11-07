@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lịch sử làm việc</title>
+<link rel="icon" href="/logo/xuong_64.png">
+<!-- Lich su lam viec cua van phong tu kho SQLite (/api/lichsu): theo ngay, theo phong, viec gan day. -->
+<style>
+  :root { --bg:#f6f5f2; --card:#fff; --ink:#1d1f24; --dim:#6b7280; --line:#e5e3de; --acc:#c2410c; --bar:#2f6fed; --ok:#15803d; --err:#dc2626; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#16181d; --card:#1f2229; --ink:#eceae6; --dim:#9aa0a8; --line:#2e323a; --acc:#fb923c; --bar:#60a5fa; --ok:#4ade80; --err:#f87171; } }
+  :root[data-theme="dark"] { --bg:#16181d; --card:#1f2229; --ink:#eceae6; --dim:#9aa0a8; --line:#2e323a; --acc:#fb923c; --bar:#60a5fa; --ok:#4ade80; --err:#f87171; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:var(--bg); border-bottom:1px solid var(--line); padding:12px 16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0 auto 0 0; }
+  header img.brand { width:28px; height:28px; border-radius:50%; margin-right:-4px; }
+
+  a.btn, button, select { font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; text-decoration:none; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  .kpi { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom:16px; }
+  .k { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .k .l { color:var(--dim); font-size:12px; } .k .v { font-size:22px; font-weight:650; font-variant-numeric:tabular-nums; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:16px; overflow-x:auto; }
+  section h2 { font-size:15px; margin:0 0 10px; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  td, th { padding:6px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+  th { font-size:12px; color:var(--dim); font-weight:600; }
+  td.n, th.n { text-align:right; }
+  td.desc { white-space:normal; min-width:240px; }
+  .bar { height:8px; background:var(--bar); border-radius:4px; min-width:2px; }
+  .av { width:22px; height:22px; border-radius:50%; vertical-align:middle; margin-right:6px; }
+  .st { font-size:12px; padding:1px 7px; border-radius:999px; background:var(--line); }
+  .st.xong { color:var(--ok); } .st.loi, .st.dung { color:var(--err); }
+  .empty { color:var(--dim); padding:20px 0; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <img class="brand" src="/logo/xuong_tron.png" alt=""><h1>📜 Lịch sử làm việc</h1>
+  <select id="ngay"><option value="7">7 ngày</option><option value="14" selected>14 ngày</option><option value="30">30 ngày</option><option value="90">90 ngày</option></select>
+  <button id="anonBtn"></button>
+  <a class="btn" href="/">Bản 2D</a><a class="btn" href="/3d">Bản 3D</a><a class="btn" href="/cauhinh">⚙️ Cấu hình</a>
+</header>
+<main>
+  <div class="kpi" id="kpi"></div>
+  <section><h2>Theo ngày</h2><div id="ngayT"></div></section>
+  <section><h2>Hồ sơ theo phòng</h2><div id="phongT"></div></section>
+  <section><h2>Việc gần đây</h2><div id="viecT"></div></section>
+</main>
+<script src="/chung.js"></script>
+<script>
+try { const t = localStorage.getItem("vp-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+const $ = s => document.querySelector(s);
+let anon = true, D = null, avatars = [];
+try { anon = localStorage.getItem("vp-anon") !== "0"; } catch (e) {}
+const escRaw = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = s => escRaw(anon ? String(s ?? "").replace(MASK.rx, m => MASK.to[m.toLowerCase()] || m) : s);
+const deptName = d => anon ? anonDept(d)[2] + " " + anonDept(d)[0] : (DEPT[d] ? DEPT[d][0] : d);
+const nf = n => Math.round(n || 0).toLocaleString("vi-VN");
+const tok = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " tr" : n >= 1e3 ? Math.round(n / 1e3) + " k" : String(n || 0);
+const dur = s => { s = Math.max(0, Math.round(s || 0)); return s < 60 ? s + " giây" : s < 3600 ? Math.round(s / 60) + " phút" : (s / 3600).toFixed(1).replace(".", ",") + " giờ"; };
+const when = ts => ts ? new Date(ts * 1000).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+const avFile = id => avatars.length ? avatars[hash(id) % avatars.length] : "";
+const ngayVN = s => { const [y, m, d] = s.split("-"); return `${d}/${m}`; };
+
+async function load() {
+  D = await (await fetch("/api/lichsu?ngay=" + $("#ngay").value, { cache: "no-store" })).json();
+  render();
+}
+function render() {
+  $("#anonBtn").textContent = anon ? "🕶️ Ẩn danh" : "👁️ Tên thật";
+  const N = Object.values(D.theo_ngay);
+  const sum = k => N.reduce((a, d) => a + (d[k] || 0), 0);
+  $("#kpi").innerHTML = [
+    ["Hồ sơ đã nộp (" + D.ngay + " ngày)", nf(sum("ho_so"))], ["Việc đã giao", nf(sum("giao"))], ["Giờ công trợ lý", sum("gio_cong").toFixed(1).replace(".", ",")],
+    ["Token viết", tok(sum("token"))], ["Tổng hồ sơ trong kho", nf(D.tong_ho_so) + (D.tu_luc ? `<div class="l">từ ${when(D.tu_luc)}</div>` : "")],
+  ].map(([l, v]) => `<div class="k"><div class="l">${l}</div><div class="v">${v}</div></div>`).join("");
+  const maxHs = Math.max(1, ...N.map(d => d.ho_so));
+  $("#ngayT").innerHTML = N.length ? `<table><thead><tr><th>Ngày</th><th class="n">Phiên</th><th class="n">Việc giao</th><th class="n">Xong</th><th class="n">Lỗi</th>
+    <th class="n">Giờ công trợ lý</th><th class="n">Token viết</th><th class="n">Hồ sơ</th><th style="width:30%"></th></tr></thead><tbody>${
+    Object.entries(D.theo_ngay).map(([n, d]) => `<tr><td>${ngayVN(n)}</td><td class="n">${d.phien}</td><td class="n">${d.giao}</td><td class="n">${d.xong}</td>
+      <td class="n">${d.loi}</td><td class="n">${d.gio_cong.toFixed(1).replace(".", ",")}</td><td class="n">${tok(d.token)}</td><td class="n">${d.ho_so}</td>
+      <td><div class="bar" style="width:${d.ho_so / maxHs * 100}%"></div></td></tr>`).join("")}</tbody></table>` : `<div class="empty">Chưa có dữ liệu.</div>`;
+  const P = Object.entries(D.theo_phong).sort((a, b) => b[1] - a[1]), maxP = Math.max(1, ...P.map(p => p[1]));
+  $("#phongT").innerHTML = P.length ? `<table><tbody>${P.map(([d, n]) => `<tr><td>${escRaw(deptName(d))}</td><td class="n">${n}</td>
+    <td style="width:50%"><div class="bar" style="width:${n / maxP * 100}%"></div></td></tr>`).join("")}</tbody></table>` : `<div class="empty">Chưa có hồ sơ.</div>`;
+  $("#viecT").innerHTML = D.viec.length ? `<table><thead><tr><th>Vào ca</th><th>Nhân viên</th><th>Phòng</th><th>Vai trò</th><th>Trạng thái</th><th>Việc</th>
+    <th class="n">Thời gian</th><th class="n">Token viết</th></tr></thead><tbody>${D.viec.map(v => {
+      const f = avFile(v.id), nm = (NV[f] || [""])[0];
+      return `<tr><td>${when(v.start)}</td><td>${f ? `<img class="av" src="/avatar/${f}.png" alt="">` : ""}${escRaw(nm)}${v.kind === "lead" ? " 👑" : ""}</td>
+        <td>${escRaw(deptName(v.dept || "Tổng hợp"))}</td><td>${escRaw(ROLE(v.type || "?"))}</td><td><span class="st ${v.status}">${ST[v.status] || v.status}</span></td>
+        <td class="desc">${esc(v.mo_ta || "")}</td><td class="n">${dur((v.last || v.start) - v.start)}</td><td class="n">${tok(v.out_tok)}</td></tr>`;
+    }).join("")}</tbody></table>` : `<div class="empty">Chưa có việc nào.</div>`;
+}
+$("#ngay").onchange = load;
+$("#anonBtn").onclick = () => { anon = !anon; try { localStorage.setItem("vp-anon", anon ? "1" : "0"); } catch (e) {} render(); };
+fetch("/api/state").then(r => r.json()).then(S => { avatars = S.avatars || []; if (D) render(); }).catch(() => {});
+load();
+</script>
+</body>
+</html>

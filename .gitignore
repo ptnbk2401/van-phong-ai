@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+avatar/to_avatar_*
+logo/nguon.json
+logo/_cu/
+logo/_goc/

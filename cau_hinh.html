@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cấu hình văn phòng</title>
+<link rel="icon" href="/logo/xuong_64.png">
+<!-- Trang quan tri: bo cuc ban 3D (co phong, hang cho, muc noi), ten xuong, giam doc, phong ban, tro ly, tu may. Luu vao kho SQLite (/api/cauhinh). -->
+<style>
+  :root { --bg:#f6f5f2; --card:#fff; --ink:#1d1f24; --dim:#6b7280; --line:#e5e3de; --acc:#c2410c; --ok:#15803d; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#16181d; --card:#1f2229; --ink:#eceae6; --dim:#9aa0a8; --line:#2e323a; --acc:#fb923c; --ok:#4ade80; } }
+  :root[data-theme="dark"] { --bg:#16181d; --card:#1f2229; --ink:#eceae6; --dim:#9aa0a8; --line:#2e323a; --acc:#fb923c; --ok:#4ade80; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:var(--bg); border-bottom:1px solid var(--line); padding:12px 16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0 auto 0 0; }
+  header img.brand { width:28px; height:28px; border-radius:50%; margin-right:-4px; }
+
+  a.btn, button { font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer; text-decoration:none; }
+  button.pri { background:var(--acc); border-color:var(--acc); color:#fff; }
+  main { max-width:1000px; margin:0 auto; padding:16px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  section h2 { font-size:15px; margin:0 0 4px; }
+  .note { color:var(--dim); font-size:12.5px; margin:0 0 12px; }
+  input, textarea { font:inherit; color:inherit; background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:6px 8px; width:100%; }
+  input.emo { width:52px; text-align:center; }
+  .bar { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap; }
+  table { width:100%; border-collapse:collapse; }
+  td, th { padding:5px 6px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
+  th { font-size:12px; color:var(--dim); font-weight:600; }
+  .key { filter:blur(5px); transition:filter .2s; color:var(--dim); font-size:12px; white-space:nowrap; }
+  tr:hover .key { filter:none; }
+  .moi { font-size:11px; color:var(--acc); }
+  .co { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; }
+  .co label { border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer; display:block; }
+  .co label:has(input:checked) { border-color:var(--acc); box-shadow:0 0 0 2px color-mix(in srgb, var(--acc) 30%, transparent); }
+  .co b { display:block; margin:2px 0; } .co small { color:var(--dim); }
+  .row2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-top:12px; }
+  .row2 label { font-size:12.5px; color:var(--dim); display:block; } select { font:inherit; color:inherit; background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:6px 8px; width:100%; }
+  .nv { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; }
+  .nvc { display:flex; gap:8px; align-items:center; border:1px solid var(--line); border-radius:10px; padding:8px; }
+  .nvc img { width:48px; height:48px; border-radius:50%; flex:none; background:var(--bg); }
+  .nvc div { flex:1; display:flex; flex-direction:column; gap:4px; min-width:0; }
+  textarea { min-height:180px; }
+  #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:8px; opacity:0; transition:opacity .3s; pointer-events:none; }
+  #toast.on { opacity:1; }
+  @media (max-width:640px) { .key { display:none; } td, th { padding:4px 3px; } }
+</style>
+</head>
+<body>
+<header>
+  <img class="brand" src="/logo/xuong_tron.png" alt=""><h1>⚙️ Cấu hình văn phòng</h1>
+  <a class="btn" href="/">Bản 2D</a><a class="btn" href="/3d">Bản 3D</a><a class="btn" href="/lichsu">📜 Lịch sử</a>
+</header>
+<main>
+  <section>
+    <h2>Bố cục bản 3D</h2>
+    <p class="note">Lưu xong thì tải lại trang 3D để dựng lại văn phòng theo cỡ mới — bàn, kệ, tủ máy, lối đi tự xếp theo cỡ phòng.</p>
+    <div class="co">
+      <label><input type="radio" name="phong" value="hep"> <b>Hẹp</b><small>6,4 × 5,8 m · 4 bàn · gọn, nhìn được nhiều phòng</small></label>
+      <label><input type="radio" name="phong" value="vua"> <b>Vừa</b><small>8 × 5,9 m · 6 bàn xếp sát</small></label>
+      <label><input type="radio" name="phong" value="rong"> <b>Rộng</b><small>9 × 6,6 m · 6 bàn thoáng</small></label>
+    </div>
+    <div class="row2">
+      <label>Hàng chờ việc: mỗi người chờ tối đa (phút)<input type="number" id="hang_phut" min="1" max="60"></label>
+      <label>Hàng chờ việc: tối đa (người)<input type="number" id="hang_max" min="1" max="16"></label>
+      <label>Phòng không có người làm<select id="tu_dong"><option value="0">Để mở (đóng tay bằng nút 🔓 ở danh sách phòng 3D)</option><option value="1">Tự đóng — có người vào làm thì tự mở</option></select></label>
+      <label>Khung hình tối đa (máy nóng thì giảm)<select id="fps"><option value="20">20 khung/giây — mát máy nhất</option><option value="30">30 khung/giây — mặc định</option><option value="60">60 khung/giây — mượt, nóng hơn</option></select></label>
+      <label>Tốc độ nhân vật<select id="toc_do"><option value="cham">Chậm (×0,7)</option><option value="vua">Vừa (×1)</option><option value="nhanh">Nhanh (×1,4)</option><option value="rat_nhanh">Rất nhanh (×1,8)</option></select></label>
+      <label>Nhân vật nói chuyện<select id="thoai"><option value="tat">Tắt</option><option value="it">Ít</option><option value="vua">Vừa</option><option value="nhieu">Nhiều</option></select></label>
+    </div>
+    <div class="bar"><button data-reset="bo_cuc">Về mặc định</button><button class="pri" data-save="bo_cuc">Lưu</button></div>
+  </section>
+  <section>
+    <h2>Phạm vi theo dõi</h2>
+    <p class="note">Mỗi prompt bạn gửi = một đầu việc Sếp giao. "Mọi phiên Claude" thêm cả phiên của các dự án khác trên máy — mỗi dự án một phòng
+      (tên theo thư mục, bản 3D vẫn ẩn danh). Áp dụng ở lần quét kế tiếp (vài giây), không cần khởi động lại.</p>
+    <div class="co">
+      <label id="pvGoc"><input type="radio" name="pham_vi" value="ytb"> <b>Chỉ dự án gốc</b><small id="pvGocNote">phiên trong thư mục dự án gốc và worktree của nó</small></label>
+      <label><input type="radio" name="pham_vi" value="tat_ca"> <b>Mọi phiên Claude</b><small>mọi dự án Claude Code trên máy (cả phiên mở qua SSH)</small></label>
+    </div>
+    <div class="co" style="margin-top:10px">
+      <label><input type="checkbox" id="nguon_codex"> <b>🤖 Codex</b><small>phiên Codex CLI, codex exec, Codex Desktop (~/.codex) — cùng luật phạm vi; bỏ qua phiên Codex nhập lại từ Claude</small></label>
+      <label><input type="checkbox" id="nguon_antigravity"> <b>✨ Antigravity</b><small>ứng dụng + lệnh agy (~/.gemini/antigravity*) — lệnh agy do Claude gọi thành trợ lý của phiên Claude đó</small></label>
+      <label style="opacity:.55;cursor:default"><input type="checkbox" disabled> <b>Grok…</b><small>sắp có</small></label>
+    </div>
+    <div class="bar"><button class="pri" data-save="pham_vi">Lưu</button></div>
+  </section>
+  <section>
+    <h2>Logo & bảng sảnh</h2>
+    <p class="note">Logo dùng ở biểu tượng tab, tiêu đề các trang, avatar Sếp, tấm logo trên bàn Sếp và bảng ở sảnh. Chọn ảnh bất kỳ — trình duyệt tự cắt vuông
+      giữa ảnh, làm bản tròn + bản nhỏ rồi lưu; logo đang dùng được cất vào <code>logo/_cu/</code>. Tải lại trang 2D/3D để thấy logo mới.</p>
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <img id="logoXem" src="/logo/xuong_tron.png" alt="" style="width:96px;height:96px;border-radius:50%;background:var(--bg)">
+      <div style="flex:1;min-width:220px"><input type="file" id="logoFile" accept="image/*">
+        <div class="bar" style="justify-content:flex-start"><button id="logoGoc">Về logo mặc định</button><button class="pri" id="logoLuu" disabled>Đổi logo</button></div></div>
+    </div>
+    <div class="row2">
+      <label>Bảng sảnh — dòng 1 (chữ lớn)<input id="dong1"></label>
+      <label>Bảng sảnh — dòng 2 (chữ nhỏ; để trống = tên xưởng)<input id="dong2"></label>
+    </div>
+    <div class="bar"><button data-reset="bien_sanh">Về mặc định</button><button class="pri" data-save="bien_sanh">Lưu</button></div>
+  </section>
+  <section>
+    <h2>Tên xưởng</h2>
+    <p class="note">Hiện ở thanh tiêu đề bản 2D, 3D và biển sảnh.</p>
+    <input id="xuong">
+    <div class="bar"><button data-reset="xuong">Về mặc định</button><button class="pri" data-save="xuong">Lưu</button></div>
+  </section>
+  <section>
+    <h2>Giám đốc</h2>
+    <p class="note">Tên trên nhãn giám đốc ở Phòng Giám Đốc (bản 3D).</p>
+    <input id="giam_doc">
+    <div class="bar"><button data-reset="giam_doc">Về mặc định</button><button class="pri" data-save="giam_doc">Lưu</button></div>
+  </section>
+  <section>
+    <h2>Phòng ban</h2>
+    <p class="note">Tên hiện trên biển phòng, danh sách phòng và bảng trắng. Cột cuối là thư mục thật — mờ đi, rê chuột vào mới thấy.
+      Không nên đặt tên gợi ý nội dung công việc.</p>
+    <table><thead><tr><th></th><th>Tên phòng</th><th>Khẩu hiệu</th><th>Thư mục</th></tr></thead><tbody id="phong"></tbody></table>
+    <div class="bar"><button data-reset="phong">Về mặc định</button><button class="pri" data-save="phong">Lưu</button></div>
+  </section>
+  <section>
+    <h2>Trợ lý</h2>
+    <p class="note">Mỗi avatar gắn cố định với một số nhân viên; đổi tên ở đây là đổi trên nhãn, bảng tin, hồ sơ.</p>
+    <div class="nv" id="nv"></div>
+    <div class="bar"><button data-reset="nhan_vien">Về mặc định</button><button class="pri" data-save="nhan_vien">Lưu</button></div>
+  </section>
+  <section>
+    <h2>Tủ máy chạy nền</h2>
+    <p class="note">Mỗi dòng một tên (có thể kèm biểu tượng). Mỗi lệnh nền nhận một tên, tên đang dùng không lặp.</p>
+    <textarea id="tu_may"></textarea>
+    <div class="bar"><button data-reset="tu_may">Về mặc định</button><button class="pri" data-save="tu_may">Lưu</button></div>
+  </section>
+  <p class="note" id="dbPath"></p>
+</main>
+<div id="toast"></div>
+<script src="/chung.js"></script>
+<script>
+try { const t = localStorage.getItem("vp-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let depts = [];
+function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove("on"), 1800); }
+
+async function init() {
+  let S = { agents: [], leads: [], avatars: [] };
+  try { S = await (await fetch("/api/state")).json(); } catch (e) {}
+  const seen = new Set([...S.agents, ...S.leads].map(a => a.dept).filter(Boolean));
+  // pham vi "du an goc": chi co khi chay app voi --goc (hoac "goc" trong config.json)
+  if (S.root) $("#pvGocNote").textContent = "phiên trong " + S.root.replace(/^\/Users\/[^/]+/, "~") + " và worktree của nó";
+  else { $("#pvGoc").style.opacity = .5; $("#pvGoc").querySelector("input").disabled = true; $("#pvGocNote").textContent = "chưa đặt dự án gốc — chạy app với --goc <thư mục>"; }
+  depts = [...new Set([...Object.keys(ANON), ...seen])];
+  $("#xuong").value = XUONG; $("#giam_doc").value = GIAM_DOC;
+  $("#dong1").value = BIEN_SANH.dong1; $("#dong2").value = BIEN_SANH.dong2;
+  const pv = document.querySelector(`input[name=pham_vi][value=${PHAM_VI}]`); if (pv) pv.checked = true;
+  $("#nguon_codex").checked = !!NGUON.codex; $("#nguon_antigravity").checked = !!NGUON.antigravity;
+  const r = document.querySelector(`input[name=phong][value=${BO_CUC.phong}]`); if (r) r.checked = true;
+  $("#hang_phut").value = BO_CUC.hang_phut; $("#hang_max").value = BO_CUC.hang_max; $("#thoai").value = BO_CUC.thoai; $("#toc_do").value = BO_CUC.toc_do || "vua"; $("#fps").value = String(BO_CUC.fps || 30); $("#tu_dong").value = BO_CUC.tu_dong ? "1" : "0";
+  $("#phong").innerHTML = depts.map(d => {
+    const [nm, mt, em] = anonDept(d);
+    return `<tr data-d="${esc(d)}"><td><input class="emo" value="${esc(em)}"></td><td><input value="${esc(nm)}"></td><td><input value="${esc(mt)}"></td>
+      <td><span class="key">${esc(d.startsWith("@") ? "📁 " + d.slice(1) : d)}</span>${ANON[d] ? "" : ' <span class="moi">mới</span>'}</td></tr>`;
+  }).join("");
+  const avs = S.avatars && S.avatars.length ? S.avatars : Object.keys(NV);
+  $("#nv").innerHTML = avs.map(k => `<div class="nvc" data-k="${esc(k)}"><img src="/avatar/${esc(k)}.png" alt="">
+    <div><input value="${esc((NV[k] || [])[0] || "")}" placeholder="Tên"><input value="${esc((NV[k] || [])[1] || "")}" placeholder="Biệt danh"></div></div>`).join("");
+  $("#tu_may").value = RACK_TEN.join("\n");
+}
+
+// chi luu phan khac mac dinh trong code
+function collect(khoa) {
+  if (khoa === "bien_sanh") { const v = { dong1: $("#dong1").value.trim(), dong2: $("#dong2").value.trim() };
+    return v.dong1 === MAC_DINH.bien_sanh.dong1 && v.dong2 === MAC_DINH.bien_sanh.dong2 ? null : v; }
+  if (khoa === "pham_vi") { const v = (document.querySelector("input[name=pham_vi]:checked") || {}).value; return v && v !== MAC_DINH.pham_vi ? v : null; }
+  if (khoa === "bo_cuc") {
+    const v = { phong: (document.querySelector("input[name=phong]:checked") || {}).value || MAC_DINH.bo_cuc.phong,
+      hang_phut: +$("#hang_phut").value || MAC_DINH.bo_cuc.hang_phut, hang_max: +$("#hang_max").value || MAC_DINH.bo_cuc.hang_max, thoai: $("#thoai").value, toc_do: $("#toc_do").value, fps: +$("#fps").value, tu_dong: $("#tu_dong").value === "1" };
+    return JSON.stringify(v) === JSON.stringify(MAC_DINH.bo_cuc) ? null : v;
+  }
+  if (khoa === "xuong" || khoa === "giam_doc") { const v = $("#" + khoa).value.trim(); return v && v !== MAC_DINH[khoa] ? v : null; }
+  if (khoa === "tu_may") { const v = $("#tu_may").value.split("\n").map(x => x.trim()).filter(Boolean); return JSON.stringify(v) === JSON.stringify(MAC_DINH.tu_may) ? null : v; }
+  if (khoa === "phong") {
+    const out = {};
+    for (const tr of $("#phong").children) {
+      const [em, nm, mt] = [...tr.querySelectorAll("input")].map(i => i.value.trim()), d = tr.dataset.d, def = MAC_DINH.phong[d];
+      if (!nm) continue;
+      if (!def || def[0] !== nm || def[1] !== mt || def[2] !== em) out[d] = [nm, mt, em];
+    }
+    return Object.keys(out).length ? out : null;
+  }
+  if (khoa === "nhan_vien") {
+    const out = {};
+    for (const c of $("#nv").children) {
+      const [nm, nick] = [...c.querySelectorAll("input")].map(i => i.value.trim()), k = c.dataset.k, def = MAC_DINH.nhan_vien[k];
+      if (nm && (!def || def[0] !== nm || def[1] !== nick)) out[k] = [nm, nick];
+    }
+    return Object.keys(out).length ? out : null;
+  }
+}
+async function save(khoa, gia_tri) {
+  const r = await fetch("/api/cauhinh", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ khoa, gia_tri }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { toast("Không lưu được: " + (d.error || r.status)); return false; }
+  return true;
+}
+document.addEventListener("click", async e => {
+  const s = e.target.closest("[data-save]"), rs = e.target.closest("[data-reset]");
+  if (s && s.dataset.save === "pham_vi") {
+    const ng = { codex: $("#nguon_codex").checked, antigravity: $("#nguon_antigravity").checked };
+    await save("nguon", ng.codex === MAC_DINH.nguon.codex && ng.antigravity === MAC_DINH.nguon.antigravity ? null : ng);
+  }
+  if (s && await save(s.dataset.save, collect(s.dataset.save))) { toast(s.dataset.save === "bo_cuc" ? "Đã lưu — tải lại trang 3D để dựng lại văn phòng" : "Đã lưu — tải lại trang 2D/3D để thấy tên mới"); }
+  if (rs && confirm("Đưa phần này về tên mặc định?") && await save(rs.dataset.reset, null)) { toast("Đã về mặc định"); setTimeout(() => location.reload(), 600); }
+});
+// ---- doi logo: cat vuong giua anh -> ban vuong 512, ban tron 512 (nen trong), ban nho 64 — lam tren trinh duyet ----
+let logoAnh = null;
+function catLogo(img, size, tron) {
+  const c = document.createElement("canvas"); c.width = c.height = size; const g = c.getContext("2d");
+  const s = Math.min(img.naturalWidth, img.naturalHeight), sx = (img.naturalWidth - s) / 2, sy = (img.naturalHeight - s) / 2;
+  if (tron) { g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); g.clip(); }
+  g.imageSmoothingQuality = "high"; g.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+  return c.toDataURL("image/png");
+}
+$("#logoFile").onchange = () => {
+  const f = $("#logoFile").files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => { logoAnh = img; $("#logoXem").src = catLogo(img, 192, true); $("#logoLuu").disabled = false; };
+  img.onerror = () => toast("Không đọc được ảnh này");
+  img.src = URL.createObjectURL(f);
+};
+async function guiLogo(body, ok) {
+  const r = await fetch("/api/logo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) return toast("Không đổi được logo: " + (d.error || r.status));
+  $("#logoXem").src = "/logo/xuong_tron.png?t=" + Date.now(); $("#logoLuu").disabled = true; $("#logoFile").value = ""; logoAnh = null; toast(ok);
+}
+$("#logoLuu").onclick = () => logoAnh && guiLogo({ xuong: catLogo(logoAnh, 512, false), tron: catLogo(logoAnh, 512, true), nho: catLogo(logoAnh, 64, false) }, "Đã đổi logo — tải lại trang 2D/3D");
+$("#logoGoc").onclick = () => confirm("Đưa logo về logo mặc định? (logo đang dùng được cất vào logo/_cu)") && guiLogo({ goc: true }, "Đã về logo mặc định");
+fetch("/api/lichsu?ngay=1").then(r => r.json()).then(d => { $("#dbPath").textContent = "Lưu trong kho SQLite: " + d.db; }).catch(() => {});
+init();
+</script>
+</body>
+</html>
