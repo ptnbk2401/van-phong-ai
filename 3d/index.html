@@ -117,7 +117,22 @@
   #load.hide { opacity:0; pointer-events:none; }
   #load p { color:var(--dim); margin-top:8px; text-align:center; }
   #err { color:#fca5a5; white-space:pre-wrap; margin-top:8px; max-width:520px; }
-  @media (max-width: 760px) { #rooms, #hint { display:none; } #feed { max-height:120px; } }
+  /* may hat: nut + am luong tren thanh tren; khung YouTube nho goc phai (YouTube yeu cau khung >= 200 px, khong an) */
+  #nhacBox { display:flex; gap:6px; align-items:center; }
+  #nhacBox button.on { background:rgba(255,184,103,.22); border-color:var(--acc); }
+  #nhacAm { width:80px; accent-color:var(--acc); display:none; }
+  #nhacBox.on #nhacAm, #nhacBox.on #nhacSau { display:inline-block; }
+  #nhacSau { display:none; }
+  #nhacTen { font-size:11.5px; color:var(--dim); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:none; }
+  #nhacBox.on #nhacTen { display:inline; }
+  #toast3d { position:fixed; z-index:6; left:50%; top:70px; transform:translateX(-50%); padding:8px 14px; border-radius:10px; background:var(--panel);
+    border:1px solid var(--line); backdrop-filter:blur(10px); font-size:13px; opacity:0; transition:opacity .3s; pointer-events:none; }
+  #toast3d.on { opacity:1; }
+  #yt { position:fixed; z-index:4; right:12px; bottom:46px; padding:6px; display:none; }
+  #yt.on { display:block; }
+  #yt .h { display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:var(--dim); margin:0 2px 5px; gap:8px; }
+  #yt iframe, #ytP { display:block; width:356px; height:200px; border:0; border-radius:8px; }
+  @media (max-width: 760px) { #rooms, #hint { display:none; } #feed { max-height:120px; } #nhacTen { display:none !important; } #yt { left:12px; right:auto; } }
 </style>
 </head>
 <body>
@@ -132,6 +147,7 @@
   <button id="btnAll" title="Phím 0">Toàn cảnh</button>
   <button id="btnWall" title="Phím T: hạ/dựng tường">Tường thấp</button>
   <button id="btnQ" title="Chất lượng hình">Vừa</button>
+  <span id="nhacBox"><button id="nhacBtn" title="Phím M: mở / tắt nhạc ở góc giải trí phòng Sếp (danh sách YouTube sửa ở ⚙️ Cấu hình)">🎵 Nhạc</button><button id="nhacSau" title="Bài sau">⏭</button><input type="range" id="nhacAm" min="0" max="100" title="Âm lượng"><span id="nhacTen"></span></span>
   <a id="demoA" href="/3d?demo=1" title="Thêm nhân viên giả để xem đi lại, nộp hồ sơ"><button id="demoBtn">🎬 Chạy thử</button></a>
   <a href="/"><button>Bản 2D</button></a>
 </div>
@@ -139,6 +155,8 @@
 <div id="feed" class="glass"><div class="h">Bảng tin</div><div id="feedList"></div></div>
 <div id="hint" class="glass">Kéo: xoay · chuột phải: dời · cuộn: gần/xa · bấm người: hồ sơ · nhấp đúp: bám theo · 1–9: phòng · Esc: thôi</div>
 
+<div id="toast3d"></div>
+<div id="yt" class="glass"><div class="h"><span>🎵 Máy hát phòng Sếp</span><a href="/cauhinh" style="color:inherit">Sửa danh sách</a></div><div id="ytP"></div></div>
 <aside id="pf" class="glass"><button class="x" id="pfX" aria-label="Đóng">×</button><div id="pfBody"></div></aside>
 
 <div id="load"><div><div style="font-size:18px;text-align:center">🏗️ Đang xây văn phòng…</div><p id="loadMsg">nạp Three.js</p><div id="err"></div></div></div>

@@ -58,6 +58,8 @@ let PHONG_DONG = [];
 let PHAM_VI = "ytb";
 // Nguon ngoai Claude Code duoc theo doi (Codex CLI / Desktop); Antigravity, Grok... them sau
 let NGUON = { codex: true, antigravity: true };
+// Goc giai tri phong Sep (ban 3D): danh sach YouTube phat lan luot (id video 11 ky tu / "list:<id playlist>"); trong = nhac tu sinh
+let NHAC = { ds: [], tron: false };
 // Phong chua co trong ANON: mat danh trung tinh theo bam ten (khong lo ten thu muc)
 const ANON_POOL = [["Ban Thư Ký","giấy tờ gọn, sếp yên tâm","📝"],["Phòng Mua Sắm","mua đúng, mua đủ","🛒"],["Phòng Đối Ngoại","bắt tay chắc, nói chuyện khéo","🕊️"],
   ["Trung Tâm Điều Phối","mọi việc về đúng chỗ","🛰️"],["Phòng Kiểm Toán","từng con số đều có lý do","🧾"],["Ban Cố Vấn","nghĩ kỹ trước khi nói","🧭"],
@@ -79,7 +81,7 @@ const RACK_TEN = ["🖨️ Máy in tầng ba", "📠 Máy fax đời cũ", "📄
 let MASK = buildMask();
 
 // Mac dinh trong code (trang /cauhinh hien de so va "Về mặc định")
-const MAC_DINH = JSON.parse(JSON.stringify({ xuong: XUONG, giam_doc: GIAM_DOC, bien_sanh: BIEN_SANH, bo_cuc: BO_CUC, pham_vi: PHAM_VI, nguon: NGUON,
+const MAC_DINH = JSON.parse(JSON.stringify({ xuong: XUONG, giam_doc: GIAM_DOC, bien_sanh: BIEN_SANH, bo_cuc: BO_CUC, pham_vi: PHAM_VI, nguon: NGUON, nhac: NHAC,
   phong: Object.fromEntries(Object.entries(ANON).map(([k, v]) => [k, v.slice(0, 3)])), nhan_vien: NV, tu_may: RACK_TEN }));
 // Ten goi + bo cuc user da sua (luu trong kho SQLite) — app.py goi ham nay o cuoi /chung.js
 function apDungCauHinh(c) {
@@ -91,6 +93,7 @@ function apDungCauHinh(c) {
   if (c.pham_vi === "ytb" || c.pham_vi === "tat_ca") PHAM_VI = c.pham_vi;
   if (Array.isArray(c.phong_dong)) PHONG_DONG = c.phong_dong.filter(x => typeof x === "string");
   if (c.nguon && typeof c.nguon === "object") NGUON = { ...NGUON, ...c.nguon };
+  if (c.nhac && typeof c.nhac === "object") NHAC = { ds: Array.isArray(c.nhac.ds) ? c.nhac.ds.filter(x => typeof x === "string") : [], tron: !!c.nhac.tron };
   for (const [d, v] of Object.entries(c.phong || {})) {
     if (!Array.isArray(v) || !v[0]) continue;
     if (ANON[d]) { ANON[d][0] = v[0]; ANON[d][1] = v[1] || ""; ANON[d][2] = v[2] || ANON[d][2]; }

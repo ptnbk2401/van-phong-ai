@@ -1610,6 +1610,15 @@ def sach_cau_hinh(khoa, v):
             raise ValueError("phong_dong phải là danh sách")
         v = list(dict.fromkeys(s(x, 80) for x in v if s(x, 80)))[:100]
         return v or None
+    if khoa == "nhac":   # goc giai tri phong Sep: danh sach video YouTube (id 11 ky tu) / playlist ("list:<id>")
+        if not isinstance(v, dict):
+            raise ValueError("nhac phải là bảng")
+        ds = [s(x, 80) for x in (v.get("ds") or []) if isinstance(x, str)]
+        ds = list(dict.fromkeys(x for x in ds if re.fullmatch(r"[A-Za-z0-9_-]{11}|list:[A-Za-z0-9_-]{10,64}", x)))[:300]
+        out = {"ds": ds} if ds else {}
+        if isinstance(v.get("tron"), bool) and v["tron"]:
+            out["tron"] = True
+        return out or None
     if khoa == "pham_vi":
         return v if v in ("ytb", "tat_ca") else None
     if khoa == "bo_cuc":

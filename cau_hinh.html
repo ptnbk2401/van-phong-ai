@@ -42,6 +42,11 @@
   .nvc img { width:48px; height:48px; border-radius:50%; flex:none; background:var(--bg); }
   .nvc div { flex:1; display:flex; flex-direction:column; gap:4px; min-width:0; }
   textarea { min-height:180px; }
+  .ytl { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px; margin-top:10px; }
+  .ytl .it { position:relative; border-radius:8px; overflow:hidden; background:var(--bg); border:1px solid var(--line); aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--dim); }
+  .ytl .it img { width:100%; height:100%; object-fit:cover; display:block; }
+  .ytl .it b { position:absolute; left:4px; top:4px; background:rgba(0,0,0,.65); color:#fff; font-size:11px; padding:0 6px; border-radius:6px; }
+  .ytl .tong { grid-column:1/-1; font-size:12.5px; color:var(--dim); }
   #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:8px; opacity:0; transition:opacity .3s; pointer-events:none; }
   #toast.on { opacity:1; }
   @media (max-width:640px) { .key { display:none; } td, th { padding:4px 3px; } }
@@ -70,6 +75,16 @@
       <label>Nhân vật nói chuyện<select id="thoai"><option value="tat">Tắt</option><option value="it">Ít</option><option value="vua">Vừa</option><option value="nhieu">Nhiều</option></select></label>
     </div>
     <div class="bar"><button data-reset="bo_cuc">Về mặc định</button><button class="pri" data-save="bo_cuc">Lưu</button></div>
+  </section>
+  <section>
+    <h2>🎵 Góc giải trí phòng Sếp</h2>
+    <p class="note">Dán link YouTube — mỗi dòng một link (video, youtu.be, Shorts, YouTube Music hay playlist có <code>list=</code>).
+      Máy hát ở phòng Sếp (bản 3D) phát lần lượt, hết danh sách thì quay lại đầu; video không cho nhúng tự bỏ qua.
+      Để trống thì phát nhạc lofi tự sinh trên máy (không cần mạng, không bản quyền). Bật / tắt ở bản 3D: nút 🎵, phím M, hoặc bấm máy hát.</p>
+    <textarea id="nhacDs" style="min-height:120px" placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/...&#10;https://www.youtube.com/playlist?list=..."></textarea>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:8px;width:max-content;cursor:pointer"><input type="checkbox" id="nhacTron" style="width:auto"> Trộn bài</label>
+    <div id="nhacXem" class="ytl"></div>
+    <div class="bar"><button data-reset="nhac">Xoá danh sách</button><button class="pri" data-save="nhac">Lưu</button></div>
   </section>
   <section>
     <h2>Phạm vi theo dõi</h2>
@@ -166,12 +181,43 @@ async function init() {
   $("#nv").innerHTML = avs.map(k => `<div class="nvc" data-k="${esc(k)}"><img src="/avatar/${esc(k)}.png" alt="">
     <div><input value="${esc((NV[k] || [])[0] || "")}" placeholder="Tên"><input value="${esc((NV[k] || [])[1] || "")}" placeholder="Biệt danh"></div></div>`).join("");
   $("#tu_may").value = RACK_TEN.join("\n");
+  $("#nhacDs").value = (NHAC.ds || []).map(x => x.startsWith("list:") ? "https://www.youtube.com/playlist?list=" + x.slice(5) : "https://youtu.be/" + x).join("\n");
+  $("#nhacTron").checked = !!NHAC.tron; xemNhac();
 }
+// link YouTube -> id video (11 ky tu) hoac "list:<id playlist>"; link co ca v= va list= thi lay video
+function tachYT(text) {
+  const out = [];
+  for (const tok of text.split(/[\s,;]+/).filter(Boolean)) {
+    let id = null, list = null;
+    if (/^[A-Za-z0-9_-]{11}$/.test(tok)) id = tok;
+    else if (/^(PL|OL|UU|FL)[A-Za-z0-9_-]{8,62}$/.test(tok)) list = tok;
+    else try {
+      const u = new URL(/^https?:/i.test(tok) ? tok : "https://" + tok), h = u.hostname.replace(/^(www|m|music)\./, "");
+      if (h === "youtu.be") id = u.pathname.slice(1, 12);
+      else if (h === "youtube.com" || h === "youtube-nocookie.com") {
+        id = u.searchParams.get("v") || (u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{11})/) || [])[1];
+        list = u.searchParams.get("list");
+      }
+    } catch (e) {}
+    if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) out.push(id);
+    else if (list && /^[A-Za-z0-9_-]{10,64}$/.test(list)) out.push("list:" + list);
+  }
+  return [...new Set(out)];
+}
+function xemNhac() {
+  const ds = tachYT($("#nhacDs").value), bo = $("#nhacDs").value.split(/[\s,;]+/).filter(Boolean).length - ds.length;
+  $("#nhacXem").innerHTML = (ds.length ? `<div class="tong">${ds.length} mục sẽ phát${bo > 0 ? ` · ${bo} mục không nhận ra (bỏ qua)` : ""}</div>` :
+    `<div class="tong">${bo > 0 ? bo + " mục không nhận ra · " : ""}Danh sách trống → phát nhạc lofi tự sinh</div>`) +
+    ds.slice(0, 60).map((x, i) => x.startsWith("list:") ? `<div class="it"><b>${i + 1}</b>📃 Playlist</div>`
+      : `<a class="it" href="https://youtu.be/${x}" target="_blank" rel="noopener"><img loading="lazy" src="https://i.ytimg.com/vi/${x}/mqdefault.jpg" alt=""><b>${i + 1}</b></a>`).join("");
+}
+$("#nhacDs").addEventListener("input", xemNhac);
 
 // chi luu phan khac mac dinh trong code
 function collect(khoa) {
   if (khoa === "bien_sanh") { const v = { dong1: $("#dong1").value.trim(), dong2: $("#dong2").value.trim() };
     return v.dong1 === MAC_DINH.bien_sanh.dong1 && v.dong2 === MAC_DINH.bien_sanh.dong2 ? null : v; }
+  if (khoa === "nhac") { const ds = tachYT($("#nhacDs").value), tron = $("#nhacTron").checked; return ds.length || tron ? { ds, tron } : null; }
   if (khoa === "pham_vi") { const v = (document.querySelector("input[name=pham_vi]:checked") || {}).value; return v && v !== MAC_DINH.pham_vi ? v : null; }
   if (khoa === "bo_cuc") {
     const v = { phong: (document.querySelector("input[name=phong]:checked") || {}).value || MAC_DINH.bo_cuc.phong,
@@ -210,8 +256,8 @@ document.addEventListener("click", async e => {
     const ng = { codex: $("#nguon_codex").checked, antigravity: $("#nguon_antigravity").checked };
     await save("nguon", ng.codex === MAC_DINH.nguon.codex && ng.antigravity === MAC_DINH.nguon.antigravity ? null : ng);
   }
-  if (s && await save(s.dataset.save, collect(s.dataset.save))) { toast(s.dataset.save === "bo_cuc" ? "Đã lưu — tải lại trang 3D để dựng lại văn phòng" : "Đã lưu — tải lại trang 2D/3D để thấy tên mới"); }
-  if (rs && confirm("Đưa phần này về tên mặc định?") && await save(rs.dataset.reset, null)) { toast("Đã về mặc định"); setTimeout(() => location.reload(), 600); }
+  if (s && await save(s.dataset.save, collect(s.dataset.save))) { toast(s.dataset.save === "bo_cuc" ? "Đã lưu — tải lại trang 3D để dựng lại văn phòng" : s.dataset.save === "nhac" ? "Đã lưu — máy hát nhận danh sách mới ở bài kế tiếp" : "Đã lưu — tải lại trang 2D/3D để thấy tên mới"); }
+  if (rs && confirm(rs.dataset.reset === "nhac" ? "Xoá danh sách nhạc?" : "Đưa phần này về tên mặc định?") && await save(rs.dataset.reset, null)) { toast("Đã về mặc định"); setTimeout(() => location.reload(), 600); }
 });
 // ---- doi logo: cat vuong giua anh -> ban vuong 512, ban tron 512 (nen trong), ban nho 64 — lam tren trinh duyet ----
 let logoAnh = null;

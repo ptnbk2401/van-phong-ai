@@ -14,7 +14,7 @@ import json, os, sqlite3, threading, time
 from datetime import datetime
 
 DB_MAC_DINH = os.path.expanduser("~/Library/Application Support/theo_doi_subagent/van_phong.db")
-KHOA_CAU_HINH = ("xuong", "giam_doc", "phong", "nhan_vien", "tu_may", "bo_cuc", "pham_vi", "nguon", "bien_sanh", "phong_dong")
+KHOA_CAU_HINH = ("xuong", "giam_doc", "phong", "nhan_vien", "tu_may", "bo_cuc", "pham_vi", "nguon", "bien_sanh", "phong_dong", "nhac")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS nhan_vien (

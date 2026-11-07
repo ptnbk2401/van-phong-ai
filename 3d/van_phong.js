@@ -13,6 +13,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { MayHat } from "./nhac.js";
 
 const V3 = THREE.Vector3;
 const TAU = Math.PI * 2;
@@ -100,6 +101,7 @@ const THOAI = {
   nghi_ngoi: ["Báo cáo xong, lướt điện thoại tí 📱", "Rảnh rồi, sếp giao việc tiếp đi ạ", "Chờ việc mới như chờ mưa", "Trà sữa đặt rồi, 15 phút nữa tới 🧋"],
   xuat_hien: ["Chào cả nhà, em tới rồi!", "Ca mới, năng lượng mới ✨", "Bàn em ở đâu nhỉ?"],
   gd_ranh: ["Hôm nay ai báo cáo trước được thưởng 🏆", "Vibe code là phải vui!", "Cà phê nguội rồi mà chưa ai báo cáo ☕", "Cả xưởng chạy êm, sướng ghê", "Prompt hay thì code tự chạy", "Ai cần anh không? Anh rảnh nè"],
+  gd_nhac: ["Bài này nghe cuốn ghê 🎶", "Nhạc lên là code chạy mượt hẳn", "Ai chọn bài này đấy, thưởng!", "Lắc lư nhẹ cái cho đỡ mỏi 🕺", "Nhạc nhỏ thôi nha, để còn nghe báo cáo"],
   gd_duyet: ["Để anh xem… ừm… ừm…", "Ai chờ lâu nhất vào trước nhé", "Duyệt nhanh thôi, đừng sốt ruột", "Ký… ký… ký… mỏi tay quá ✍️"],
   gd_khen: ["Tốt lắm! Thưởng ly trà sữa 🧋", "Làm tốt! Nghỉ tay chút đi", "Xuất sắc, đúng chất dân vibe code!", "Nhanh ghê, tăng lương… trong mơ nhé 😆", "Ok, để anh xem kỹ sau"],
   gd_hen: ["Được, ngồi chờ anh chút nhé", "Câu hỏi hay! Để anh nghĩ", "Ngồi ghế đợi nha, anh xem ngay"],
@@ -714,6 +716,8 @@ for (let k = 0; k < 6; k++) {
   SEATS.push({ spot: gdSpot(dx, ZB - .8, Math.PI, [[dx, ZB - 1.55], [1.6, ZB - 1.55]], { chair: true, look: -1 }), owner: null });
 }
 let gdTray = null, gdTV = null, gdHit = null, gdScreens = [], gdInbox = 0, director = null, gdTvKey = "";
+// goc giai tri (phong Sep, nua phia nam truoc TV): may hat + dia than + loa, nhay theo nhac
+let giaiTri = null;
 const pickReport = w => REPORT[hash(w.id) % REPORT.length];
 // hang cho viec: truong phong ranh that (da bao cao, chua co viec moi) dung xep hang, ai xong som dung dau
 const QUEUE = [];
@@ -950,6 +954,125 @@ function buildGD(B, x0, r) {
   gdTV = canvasTex(1024, 576, () => {}); gdTvKey = "";
   const tv = new THREE.Mesh(UNIT.plane, new THREE.MeshStandardMaterial({ color: "#000", emissive: "#ffffff", emissiveMap: gdTV, emissiveIntensity: .95, roughness: .3 }));
   tv.scale.set(2.64, 1.485, 1); tv.position.set(x0 + .09, 1.75, -4.2); tv.rotation.y = Math.PI / 2; shell.add(tv);
+  buildGiaiTri(B, x0, xG);
+}
+// Goc giai tri: sofa nhin ra TV, ban tra, 2 loa dung, ke dia than + mam quay, may hat (jukebox) sat vach kinh dong.
+// Loi di x0+1,6 (cua -> ghe cho duyet) va hanh lang ghe z = -ZB+1,55 de trong.
+function buildGiaiTri(B, x0, xG) {
+  const zc = -4.2, sx = x0 + 3.35, jx = xG - .45, jz = -5.4, kx = x0 + 3.35, kz = -5.85;
+  wallXZ("shell", sx - .42, zc - 1.06, sx + .45, zc + 1.06); wallXZ("shell", x0 + 2.2, zc - .5, x0 + 2.7, zc + .5);
+  wallXZ("shell", kx - .42, kz - .27, kx + .42, kz + .27); wallXZ("shell", jx - .3, jz - .42, jx + .3, jz + .42);
+  const rug = new THREE.Mesh(UNIT.plane, std("#ffffff", .98, 0, { map: canvasTex(128, 128, drawCarpet("#0e7490"), [3, 3]) }));
+  rug.scale.set(2.5, 2.9, 1); rug.rotation.x = -Math.PI / 2; rug.position.set(x0 + 2.75, .006, zc); rug.receiveShadow = true; shell.add(rug);
+  // sofa 3 cho, lung o phia dong
+  const vai = std("#8a5a44", .95), dem = std("#a8735a", .95);
+  B.box(vai, .85, .36, 2.1, sx, .2, zc); B.box(vai, .2, .5, 2.1, sx + .33, .62, zc, 0, 0, -.08);
+  for (const s of [-1, 1]) B.box(vai, .85, .58, .16, sx, .29, zc + s * 1.0);
+  for (let k = -1; k <= 1; k++) { B.box(dem, .62, .1, .6, sx - .06, .43, zc + k * .63); B.box(dem, .12, .36, .56, sx + .2, .66, zc + k * .63, 0, 0, -.1); }
+  B.box(std("#f2c14e", .9), .1, .26, .26, sx + .12, .58, zc - .72, 0, 0, -.3);   // goi tua vang
+  for (const [ax, az] of [[-.36, -.95], [.36, -.95], [-.36, .95], [.36, .95]]) B.cyl(MAT.metal, .02, .06, sx + ax, .03, zc + az);
+  // ban tra: mat go, chan kim loai, ly + dia snack
+  B.box(MAT.walnut, .5, .04, 1.0, x0 + 2.45, .42, zc);
+  for (const [ax, az] of [[-.2, -.44], [.2, -.44], [-.2, .44], [.2, .44]]) B.box(MAT.metal, .03, .4, .03, x0 + 2.45 + ax, .2, zc + az);
+  B.cyl(MAT.mug, .04, .1, x0 + 2.4, .49, zc + .25); B.cyl(MAT.coffee, .035, .005, x0 + 2.4, .54, zc + .25);
+  B.cyl(MAT.white, .11, .03, x0 + 2.5, .455, zc - .2);
+  for (let k = 0; k < 6; k++) B.sph(std(["#f59e0b", "#dc2626", "#fde68a"][k % 3], .6), .028, .022, .028, x0 + 2.5 + Math.cos(k) * .05, .48, zc - .2 + Math.sin(k) * .05);
+  B.box(MAT.plastic, .05, .02, .16, x0 + 2.55, .45, zc + .05);   // dieu khien
+  // den cay canh sofa
+  B.cyl(MAT.metal, .12, .02, sx + .1, .01, zc + 1.32); B.cyl(MAT.metal, .012, 1.45, sx + .1, .73, zc + 1.32);
+  const chao = new THREE.Mesh(new THREE.CylinderGeometry(.13, .2, .24, 20, 1, true), new THREE.MeshStandardMaterial({ color: "#fff4dc", emissive: "#ffd89a", emissiveIntensity: .5, roughness: .8, side: THREE.DoubleSide }));
+  chao.position.set(sx + .1, 1.5, zc + 1.32); shell.add(chao);
+  // 2 loa dung hai ben TV, mang loa nhun theo nhac
+  const loa = [];
+  for (const z of [-2.45, -5.95]) {
+    B.box(MAT.walnut, .3, 1.0, .3, x0 + .22, .5, z);
+    B.box(MAT.plastic, .01, .92, .26, x0 + .375, .5, z);
+    for (const [y, r] of [[.34, .1], [.66, .07], [.86, .035]]) {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r * .8, .03, 24), std("#3a3f47", .5, .2));
+      c.rotation.z = Math.PI / 2; c.position.set(x0 + .39, y, z); shell.add(c); loa.push({ m: c, r });
+    }
+  }
+  // ke dia than: tu thap + mam quay + hop dia
+  B.box(MAT.walnut, .8, .55, .5, kx, .275, kz); B.box(MAT.plastic, .78, .02, .48, kx, .56, kz);
+  B.box(std("#d6d3cd", .4, .3), .44, .06, .36, kx + .1, .6, kz);
+  B.cyl(MAT.chrome, .16, .02, kx + .06, .64, kz);
+  const dia = new THREE.Group();
+  const den = new THREE.Mesh(new THREE.CylinderGeometry(.15, .15, .006, 40), std("#0b0b0d", .25, .1)); dia.add(den);
+  const nhan = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .008, 24), std("#dc2626", .6)); nhan.position.x = .015; dia.add(nhan);
+  dia.position.set(kx + .06, .654, kz); shell.add(dia);
+  B.box(MAT.chrome, .02, .02, .22, kx + .26, .66, kz + .02, .5); B.cyl(MAT.chrome, .025, .04, kx + .28, .65, kz - .11);
+  for (let k = 0; k < 9; k++) B.box(std(["#2563eb", "#f59e0b", "#16a34a", "#db2777", "#7c3aed", "#0ea5e9"][k % 6], .7), .02, .3, .3, kx - .3 + k * .025, .74, kz + .02, 0, 0, (k - 4) * .04);
+  // may hat (jukebox) mat quay ve phia tay (-x)
+  B.box(MAT.walnut, .55, 1.25, .8, jx, .625, jz);
+  const vom = new THREE.Mesh(new THREE.CylinderGeometry(.4, .4, .55, 32, 1, false, 0, Math.PI), MAT.walnut);
+  vom.rotation.set(0, 0, Math.PI / 2); vom.rotation.order = "ZYX"; vom.position.set(jx, 1.25, jz); vom.castShadow = true; shell.add(vom);
+  const matJb = canvasTex(256, 384, (g, W, H) => {
+    const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, "#fde68a"); gr.addColorStop(.45, "#fb7185"); gr.addColorStop(1, "#7c3aed");
+    g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.fillStyle = "rgba(20,10,30,.85)"; roundRect(g, 36, 120, W - 72, 110, 14); g.fill();
+    for (let i = 0; i < 6; i++) { g.fillStyle = ["#fde68a", "#fca5a5", "#a5f3fc"][i % 3]; g.fillRect(52, 136 + i * 15, W - 104 - (i * 23) % 60, 7); }
+    g.fillStyle = "rgba(0,0,0,.55)"; g.beginPath(); g.arc(W / 2, 312, 52, 0, TAU); g.fill();
+    g.strokeStyle = "rgba(255,255,255,.35)"; g.lineWidth = 3; for (let r = 14; r < 52; r += 9) { g.beginPath(); g.arc(W / 2, 312, r, 0, TAU); g.stroke(); }
+    g.fillStyle = "#fff"; g.font = "700 46px -apple-system, sans-serif"; g.textAlign = "center"; g.fillText("♫ ♪ ♫", W / 2, 80);
+  });
+  const mJb = new THREE.MeshStandardMaterial({ map: matJb, emissive: "#ffffff", emissiveMap: matJb, emissiveIntensity: .35, roughness: .35 });
+  const mat0 = new THREE.Mesh(UNIT.plane, mJb); mat0.scale.set(.66, 1.0, 1); mat0.position.set(jx - .278, .78, jz); mat0.rotation.y = -Math.PI / 2; shell.add(mat0);
+  const ong = new THREE.MeshStandardMaterial({ color: "#ff9de2", emissive: "#ff5fc8", emissiveIntensity: .6, roughness: .3 });
+  for (const s of [-1, 1]) { const b = new THREE.Mesh(UNIT.box, ong); b.scale.set(.04, 1.05, .04); b.position.set(jx - .27, .74, jz + s * .37); shell.add(b); }
+  const cung = new THREE.Mesh(new THREE.TorusGeometry(.37, .022, 8, 32, Math.PI), ong); cung.position.set(jx - .27, 1.26, jz); cung.rotation.y = Math.PI / 2; shell.add(cung);
+  // bien neon nho phia tren
+  const neon = canvasTex(512, 128, (g, W, H) => {
+    g.fillStyle = "rgba(10,12,20,.9)"; roundRect(g, 0, 0, W, H, 22); g.fill();
+    g.shadowColor = "#f472b6"; g.shadowBlur = 18; g.fillStyle = "#fbcfe8"; g.textBaseline = "middle"; g.textAlign = "center";
+    g.font = "700 54px -apple-system, sans-serif"; g.fillText("🎵 Góc giải trí", W / 2, H / 2 + 2);
+  });
+  const mNeon = new THREE.MeshStandardMaterial({ map: neon, emissive: "#ffffff", emissiveMap: neon, emissiveIntensity: .45, roughness: .5, transparent: true });
+  const bn = new THREE.Mesh(UNIT.plane, mNeon); bn.scale.set(1.1, .275, 1); bn.position.set(jx - .1, 1.92, jz); bn.rotation.y = -Math.PI / 2; shell.add(bn);
+  B.cyl(MAT.metal, .008, .2, jx - .1, 1.74, jz - .4); B.cyl(MAT.metal, .008, .2, jx - .1, 1.74, jz + .4);
+  // vung bam: may hat + ke dia (bam = mo / tat nhac)
+  const hit = new THREE.Mesh(UNIT.box, new THREE.MeshBasicMaterial({ visible: false }));
+  hit.scale.set(.7, 1.9, 1.0); hit.position.set(jx, .95, jz); hit.userData.mayHat = true; shell.add(hit);
+  const hit2 = new THREE.Mesh(UNIT.box, new THREE.MeshBasicMaterial({ visible: false }));
+  hit2.scale.set(.9, .9, .6); hit2.position.set(kx, .45, kz); hit2.userData.mayHat = true; shell.add(hit2);
+  giaiTri = { dia, loa, mJb, ong, mNeon, hits: [hit, hit2], noteAt: [[jx - .2, 1.75, jz], [kx + .06, .8, kz]], nextNote: 0 };
+}
+// not nhac bay len tu may hat khi dang phat (pool sprite dung chung, khong tao moi moi khung)
+const NOTE_TEX = ["♪", "♫", "♬"].map((ch, i) => canvasTex(64, 64, (g, W, H) => {
+  g.shadowColor = "rgba(0,0,0,.5)"; g.shadowBlur = 4; g.fillStyle = ["#fde68a", "#f9a8d4", "#a5f3fc"][i];
+  g.font = "700 50px -apple-system, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(ch, W / 2, H / 2 + 2);
+}));
+const NOTES = Array.from({ length: 10 }, (_, i) => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: NOTE_TEX[i % 3], transparent: true, depthWrite: false, opacity: 0 }));
+  s.scale.set(.22, .22, 1); s.visible = false; scene.add(s); return { s, t: -1, x: 0, z: 0, y: 0 };
+});
+const mayHat = new MayHat({ khung: document.getElementById("yt"), onDoi: veNutNhac });
+function veNutNhac() {
+  const box = document.getElementById("nhacBox"); if (!box) return;
+  box.classList.toggle("on", mayHat.bat); $("#nhacBtn").classList.toggle("on", mayHat.bat);
+  $("#nhacBtn").textContent = mayHat.bat ? "🎵 Đang phát" : "🎵 Nhạc";
+  $("#nhacTen").textContent = mayHat.ten || ""; $("#nhacTen").title = mayHat.ten || "";
+  if (mayHat.baoLoi) { feedNote(mayHat.baoLoi); mayHat.baoLoi = ""; }
+}
+function tickGiaiTri(dt, t) {
+  if (!giaiTri) return;
+  const on = mayHat.bat, p = mayHat.nhip();
+  if (on) giaiTri.dia.rotation.y -= dt * 3.5;
+  for (const l of giaiTri.loa) l.m.scale.y = 1 + (on ? p * .9 : 0);
+  giaiTri.mJb.emissiveIntensity = on ? .7 + p * .5 : .3;
+  giaiTri.ong.emissive.setHSL(on ? (t * .06) % 1 : .9, .9, .55); giaiTri.ong.emissiveIntensity = on ? .8 + p * .6 : .35;
+  giaiTri.mNeon.emissiveIntensity = on ? .9 : .4;
+  if (on && t > giaiTri.nextNote) {
+    giaiTri.nextNote = t + .55 + Math.random() * .5;
+    const n = NOTES.find(n => n.t < 0), at = giaiTri.noteAt[Math.random() < .65 ? 0 : 1];
+    if (n) { n.t = 0; n.x = at[0] + (Math.random() - .5) * .2; n.y = at[1]; n.z = at[2] + (Math.random() - .5) * .3; n.s.visible = true; }
+  }
+  for (const n of NOTES) {
+    if (n.t < 0) continue;
+    n.t += dt; const k = n.t / 2.6;
+    if (k >= 1) { n.t = -1; n.s.visible = false; continue; }
+    n.s.position.set(n.x + Math.sin(n.t * 2.4) * .08, n.y + k * 1.1, n.z);
+    n.s.material.opacity = Math.min(1, k * 6) * (1 - k);
+  }
 }
 // Logo xuong (logo/xuong_tron.png — anh Sep): bang logo sanh + tam logo tren ban Sep
 const LOGO_TEX = new THREE.TextureLoader().load("/logo/xuong_tron.png");
@@ -1603,7 +1726,7 @@ class Director {
     if (this.sayLater && tNow >= this.sayLater.at) { this.noi(this.sayLater.text, 3.5); this.sayLater = null; }
     if (!this.say && tNow > (this.nextTalk ??= tNow + 3) && (anim === "type" || anim === "read")) {
       this.nextTalk = tNow + ((DEMO ? 7 : 12) + Math.random() * 10) * (THOAI_NHIP || 1);
-      this.noi(thoai(anim === "read" ? "gd_duyet" : "gd_ranh"));
+      this.noi(thoai(anim === "read" ? "gd_duyet" : mayHat.bat && Math.random() < .5 ? "gd_nhac" : "gd_ranh"));
     }
     const act = this.say ? this.say.text : anim === "gdlisten" ? "👂 Đang nghe báo cáo" : anim === "gdassign" ? "📣 Đang giao việc" : waiting ? `📝 Đang duyệt · ${waiting} người chờ` : "☕ Chờ báo cáo";
     this.el.classList.toggle("talk", !!this.say);
@@ -1944,6 +2067,7 @@ canvas.addEventListener("pointerup", e => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
   const hit = pick(e);
   if (hit && hit.worker) openPf(hit.worker.id);
+  else if (hit && hit.mayHat) mayHat.batTat();
   else if (hit && (hit.director || hit.gd)) openGD();
   else if (hit && hit.room) focusRoom(hit.room);
 });
@@ -1951,7 +2075,7 @@ canvas.addEventListener("dblclick", e => { const hit = pick(e); if (hit && hit.w
 function pick(e) {
   ndc.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const objs = [...[...workers.values()].map(w => w.hit), ...realRooms().map(r => r.hit), ...(director ? [director.hit] : []), ...(gdHit ? [gdHit] : [])];
+  const objs = [...[...workers.values()].map(w => w.hit), ...realRooms().map(r => r.hit), ...(director ? [director.hit] : []), ...(giaiTri ? giaiTri.hits : []), ...(gdHit ? [gdHit] : [])];
   const h = ray.intersectObjects(objs, false)[0];
   return h ? h.object.userData : null;
 }
@@ -1969,8 +2093,17 @@ addEventListener("keydown", e => {
   else if (/^[1-9]$/.test(e.key)) focusRoom(realRooms()[+e.key - 1]);
   else if (e.key === "g" || e.key === "G") openGD();
   else if (e.key === "t" || e.key === "T") cycleWall();
+  else if (e.key === "m" || e.key === "M") mayHat.batTat();
 });
-const HINT = $("#hint").textContent + " · K: sếp đi kiểm tra";
+$("#nhacBtn").onclick = () => mayHat.batTat();
+$("#nhacSau").onclick = () => mayHat.baiSau();
+$("#nhacAm").value = mayHat.am;
+$("#nhacAm").oninput = e => mayHat.datAm(+e.target.value);
+function feedNote(text) {
+  const el = document.getElementById("toast3d"); if (!el) return;
+  el.textContent = text; el.classList.add("on"); clearTimeout(feedNote.t); feedNote.t = setTimeout(() => el.classList.remove("on"), 4000);
+}
+const HINT = $("#hint").textContent + " · K: sếp đi kiểm tra · M: nhạc";
 $("#hint").textContent = HINT;
 $("#btnKt").onclick = () => { if (!director) return; director.mode === "kiemtra" ? director.stopInspect() : director.startInspect(); };
 // keo chuot / cuon khi dang lai sep: xoay + doi khoang cach may quay
@@ -1992,6 +2125,8 @@ function hideLoad() { $("#load").classList.add("hide"); }
 
 // ---------- vong lap ----------
 const timer = new THREE.Timer();
+// dat may quay theo toa do phong Sep (dx = met tinh tu mep tay phong) — de chup kiem tu dong: window.__vpNhinGD(dx, z, cao, xa)
+window.__vpNhinGD = (dx, z, h = 3, d = 4) => { fly = null; follow(null); controls.target.set(GD.x0 + dx, .6, z); camera.position.set(GD.x0 + dx - d * .6, h, z + d * .8); controls.update(); };
 // so lieu chan doan (bo nho GPU, so nhan vien) — goi tu console / kiem tu dong: window.__vpChanDoan()
 window.__vpChanDoan = () => ({ ...renderer.info.memory, calls: lastCalls, tris: lastTris, programs: (renderer.info.programs || []).length, workers: workers.size,
   sceneObjs: (() => { let n = 0; scene.traverse(() => n++); return n; })(), screens: SCREENS.length });
@@ -2020,6 +2155,7 @@ function frame() {
   controls.update();
   for (const w of [...workers.values()]) w.tick(dt, t);
   if (director) director.tick(dt, t);
+  tickGiaiTri(dt, t);
   // man hinh: ve lai 6 lan/giay
   screenT += dt;
   if (screenT > .16) {
