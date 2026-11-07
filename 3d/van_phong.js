@@ -524,7 +524,8 @@ class Room {
       B.box(MAT.plastic, .035, .37, .62, du + .3, 1.12, rv);              // vo man hinh
       B.box(MAT.keys, .15, .015, .42, du - .2, .755, rv);                 // ban phim
       B.box(MAT.plastic, .1, .02, .06, du - .2, .755, rv + .3);            // chuot
-      if (r() < .7) { B.cyl(MAT.mug, .04, .1, du - .05, .8, rv - .42); B.cyl(MAT.coffee, .036, .005, du - .05, .85, rv - .42); }
+      let mug = null;
+      if (r() < .7) { B.cyl(MAT.mug, .04, .1, du - .05, .8, rv - .42); B.cyl(MAT.coffee, .036, .005, du - .05, .85, rv - .42); mug = this.w(du - .05, rv - .42, .86); }
       if (r() < .6) for (let k = 0; k < 3 + r() * 5; k++) B.box(MAT.paper, .2, .004, .26, du + .05 + r() * .04, .754 + k * .005, rv + .37, r() * .3);
       if (r() < .35) plant(B, du + .18, rv - .45, .26, r);
       chair(B, cu, rv, Math.PI / 2);
@@ -534,7 +535,7 @@ class Room {
       sm.position.set(du + .28, 1.12, rv); sm.rotation.y = -Math.PI / 2; this.trong.add(sm);
       const via = [[cu - .65, rv], [cu - .65, LANE_V]];
       this.desks.push({
-        spot: this.spot(cu, rv, 1, 0, via, { chair: true }), screen: sc, owner: null, idx: ri * COLS.length + ci,
+        spot: this.spot(cu, rv, 1, 0, via, { chair: true }), screen: sc, owner: null, idx: ri * COLS.length + ci, mug,
         check: this.spot(cu - .5, rv + .55, .7, -.5, [[cu - .65, rv + .55], [cu - .65, LANE_V]]),
       });
     }
@@ -552,7 +553,7 @@ class Room {
     const lsc = makeScreen(hash(this.dept) + 99, 320, 180);
     const lsm = new THREE.Mesh(UNIT.plane, lsc.mat); lsm.scale.set(.66, .36, 1); lsm.position.set(lu, 1.15, lv - .18); this.trong.add(lsm);
     wallRect(this, this.w(lu - .7, lv - .4), this.w(lu + .7, lv + .4));
-    this.lead = { spot: this.spot(lu, RD - .75, 0, -1, [[-RW / 2 + .5, RD - .75], [-RW / 2 + .5, LANE_V]], { chair: true }), screen: lsc, owner: null,
+    this.lead = { spot: this.spot(lu, RD - .75, 0, -1, [[-RW / 2 + .5, RD - .75], [-RW / 2 + .5, LANE_V]], { chair: true }), screen: lsc, owner: null, mug: this.w(lu - .5, lv + .15, .88),
       check: this.spot(lu + 1.0, RD - .75, -1, 0, [[lu + 1.0, LANE_V]]) };   // cho Sep dung canh khi di kiem tra
     // ke ho so (binder) sat tuong ngoai
     const su = SHELF_U, sv = RD - .34, sw = SHELF_W, nb = SHELF_PER * 3;
@@ -818,6 +819,7 @@ function buildShell() {
   B.box(MAT.walnut, 1.4, .05, .7, -6.45, .42, 5.4 + LZ); B.box(MAT.metal, 1.3, .38, .6, -6.45, .2, 5.4 + LZ);
   B.cyl(MAT.mug, .04, .1, -6.2, .5, 5.3 + LZ); plant(B, -6.8, 5.45 + LZ, .2, r);
   plant(B, -9.3, ZB - 1, 1.3, r); plant(B, -1.0, ZB - 1, 1.1, r); plant(B, -1.0, -ZB + 1, 1.1, r);
+  buildMayIn(B);
   // phong hop cho o con trong
   B.build(shell);
   for (const rm of rooms.filter(x => !x.dept)) { scene.remove(rm.g); }
@@ -841,6 +843,7 @@ function buildShell() {
   sun.position.set(cx - 22, 34, 26);
   Object.assign(sun.shadow.camera, { left: -half * 1.2, right: half * 1.2, top: half, bottom: -half, near: 1, far: 120 });
   sun.shadow.camera.updateProjectionMatrix();
+  buildVangDen(xG);
   // giam doc ngoi dung cho; ai dang ngoi/dung trong phong giam doc thi doi theo phong
   if (!director) director = new Director();
   director.place();
@@ -1150,6 +1153,7 @@ scene.add(sky);
 let skyNight = -1;
 // phong nen: "co" = san co tuoi + troi theo gio; "studio" = sa ban tren nen toi (khong troi, suong mo dan ra xa)
 const STUDIO = BC.nen === "studio";
+const NEN_DEM = { co: new THREE.Color("#173226"), san: new THREE.Color("#4a4740") };
 if (STUDIO) {
   MAT.ground.color.set("#0d1117"); MAT.ground.roughness = .9; MAT.plaza.color.set("#1c232d"); MAT.road.color.set("#121821");
   scene.fog = new THREE.Fog("#0d1117", 70, 170);
@@ -1174,7 +1178,8 @@ function drawSky(tod) {
     g.fillStyle = tod.night > .5 ? "#0f1a16" : "#5aa86f"; g.fillRect(0, H * .86, W, H * .14);
   });
 }
-// gio trong ngay theo dong ho that
+// gio trong ngay theo dong ho that (?gio=22 tren dia chi = ep gio, de xem thu ban dem)
+const GIO_EP = (() => { const g = new URLSearchParams(location.search).get("gio"); return g !== null && !isNaN(+g) ? clamp(+g, 0, 23.99) : null; })();
 const TOD = [
   [0, .05, "#8fa4d8", .25, .42, "#0b1430", "#26355a", 1], [5.5, .08, "#8fa4d8", .3, .45, "#141f44", "#3a4670", 1],
   [6.7, .9, "#ffbf8a", .5, .58, "#6f8fc4", "#f6c69c", .3], [9, 1.6, "#fff3e0", .62, .62, "#5c9be0", "#d5e7f6", 0],
@@ -1182,7 +1187,7 @@ const TOD = [
   [19.3, .08, "#8fa4d8", .3, .45, "#121c40", "#2f3c66", 1], [24, .05, "#8fa4d8", .25, .42, "#0b1430", "#26355a", 1],
 ];
 function tod() {
-  const d = new Date(), h = d.getHours() + d.getMinutes() / 60;
+  const d = new Date(), h = GIO_EP !== null ? GIO_EP : d.getHours() + d.getMinutes() / 60;
   let i = 0; while (i < TOD.length - 2 && TOD[i + 1][0] <= h) i++;
   const a = TOD[i], b = TOD[i + 1], t = clamp((h - a[0]) / (b[0] - a[0]), 0, 1);
   const col = (x, y) => "#" + new THREE.Color(x).lerp(new THREE.Color(y), t).getHexString();
@@ -1191,12 +1196,18 @@ function tod() {
 }
 function applyTod() {
   const t = tod();
-  sun.intensity = t.sun; sun.color.set(t.sunCol); hemi.intensity = t.hemi; scene.environmentIntensity = t.env + t.night * .15;
+  // dem: troi ngoai xanh lanh, toi han (moi truong giam manh) — ben trong sang nho den am + vang sang + man hinh
+  sun.intensity = t.sun; sun.color.set(t.sunCol); hemi.intensity = t.hemi * (1 - t.night * .35); scene.environmentIntensity = t.env * (1 - t.night * .62);
+  hemi.color.set(t.night > .5 ? "#7d8fc4" : "#e8f1ff"); hemi.groundColor.set(t.night > .5 ? "#3a3326" : "#a3967f");
+  if (!STUDIO) {   // co + san lat toi dan theo dem (de ben trong noi am)
+    MAT.ground.color.set("#46a063").lerp(NEN_DEM.co, t.night * .85); MAT.plaza.color.set("#cdc3b0").lerp(NEN_DEM.san, t.night * .7);
+  }
   scene.background = STUDIO ? new THREE.Color("#0d1117") : new THREE.Color(t.skyBot);
   sky.visible = !STUDIO;
   const n = t.night > .5 ? 1 : 0;
   if (n !== skyNight || !skyTex.userData.drawn) { drawSky(t); skyNight = n; skyTex.userData.drawn = 1; }
   for (const sc of SCREENS) sc.mat.emissiveIntensity = .8 + t.night * .5;
+  denDem(t); hat.doiGio(t);
 }
 
 // ---------- nhan vien ----------
@@ -1413,7 +1424,9 @@ class Worker {
     return "leave";
   }
   update(a) {
+    const truoc = this.a && this.a.status;
     this.a = a;
+    if (truoc && truoc !== a.status) fxDoiTrangThai(this, truoc, a.status);
     const m = this.wantMode(), rm = this.room();
     if (m !== this.mode) this.setMode(m);
     else if (m === "desk" && rm && this.slot && !(rm.desks.includes(this.slot) || rm.lead === this.slot || rm.stand.includes(this.slot))) this.setMode("desk");  // doi phong
@@ -1460,6 +1473,7 @@ class Worker {
     } else if (m === "gone") { this.freeSlot(); this.plan.push({ k: "vanish" }); }
   }
   remove() {
+    fxBo(this);
     this.freeSlot(); this.root.remove(this.label); scene.remove(this.root); workers.delete(this.id);
     if (follow.w === this) follow(null);
   }
@@ -1483,6 +1497,7 @@ class Worker {
       if (director && director.mode === "ban") director.noi(`📣 ${staffOf(this.id)[0] || "Em"} ơi, ${thoai("gd_giao")}`, 3.4);   // Sep di vang thi khong noi vong
       this.sayLater = { at: tNow + 1.4, text: thoai("nhan_viec") };
     } else if (st.k === "act" && st.anim === "place") this.noi(thoai("nop_ho_so"), 3);
+    if (st.k === "act" && st.anim === "report") { phaoGiay(this.root.position, 24); mayIn.in(); }   // nop bao cao -> may in sanh in mot to
     else if (st.k === "walk" && Math.random() < .6 && (REPORT.some(r => r.spot === st.spot) || st.spot === ELEV)) this.noi(thoai(this.talkKey() || "di"), 3.5);
     if (st.k === "vanish") st.dur = .8;
   }
@@ -1515,7 +1530,7 @@ class Worker {
     const yt = moving ? this.yawTarget : (this.spot ? this.spot.yaw : this.yawNow);
     let dy = ((yt - this.yawNow + Math.PI) % TAU + TAU) % TAU - Math.PI;
     this.yawNow += dy * Math.min(1, dt * (moving ? 14 : 8));
-    this.root.rotation.y = this.yawNow;
+    this.root.rotation.y = this.yawNow + (anim === "wait" ? Math.sin(t * .8 + this.ph) * .17 : 0);   // cho viec: xoay ghe lac lu +-10 do
     this.anim = anim;
     this.talkTick();
     this.pose(dt, t, anim, moving);
@@ -2159,10 +2174,13 @@ function hideLoad() { $("#load").classList.add("hide"); }
 // ---------- vong lap ----------
 const timer = new THREE.Timer();
 // dat may quay theo toa do phong Sep (dx = met tinh tu mep tay phong) — de chup kiem tu dong: window.__vpNhinGD(dx, z, cao, xa)
+window.__vpNhin = (px, py, pz, tx, ty, tz) => { fly = null; follow(null); controls.target.set(tx, ty, tz); camera.position.set(px, py, pz); controls.update(); };
+window.__vpThu = { loi: () => { const w = window.__vpThu.w; if (w) { w.a = { ...w.a, status: "loi" }; } }, nguoi: () => { const w = window.__vpThu.w = [...workers.values()].find(x => x.a.status === "loi" && x.mode === "desk") || [...workers.values()].find(x => x.anim === "type"); if (!w) return null; const p = w.root.localToWorld(new V3(1.8, 2.3, 2.3)), q = w.root.position; window.__vpNhin(p.x, p.y, p.z, q.x, 1.6, q.z); return w.a.status + "/" + w.anim; }, phao: () => { const w = window.__vpThu.w || [...workers.values()][0]; if (w) phaoGiay(w.root.position, 40); }, in: () => mayIn.in(), tour: () => tourBat(true) };
 window.__vpNhinGD = (dx, z, h = 3, d = 4) => { fly = null; follow(null); controls.target.set(GD.x0 + dx, .6, z); camera.position.set(GD.x0 + dx - d * .6, h, z + d * .8); controls.update(); };
 // so lieu chan doan (bo nho GPU, so nhan vien) — goi tu console / kiem tu dong: window.__vpChanDoan()
 window.__vpChanDoan = () => ({ ...renderer.info.memory, calls: lastCalls, tris: lastTris, programs: (renderer.info.programs || []).length, workers: workers.size,
-  sceneObjs: (() => { let n = 0; scene.traverse(() => n++); return n; })(), screens: SCREENS.length });
+  sceneObjs: (() => { let n = 0; scene.traverse(() => n++); return n; })(), screens: SCREENS.length,
+  dem: +demK.toFixed(2), sun: +sun.intensity.toFixed(2), hemi: +hemi.intensity.toFixed(2), env: +scene.environmentIntensity.toFixed(2), tour: TOUR.on });
 let fpsAcc = 0, fpsN = 0, fpsT = 0, lowStreak = 0, screenT = 0, ledT = 0, lblT = 0, todT = 0;
 // gioi han khung hinh (trang Cau hinh, mac dinh 30): canh cham, ve het suc la phi CPU/GPU va nong may
 const FPS_MAX = [20, 30, 60].includes(+BC.fps) ? +BC.fps : 30;
@@ -2176,8 +2194,9 @@ function frame() {
   khungDu = 0;
   tNow = t;
   if (!innerWidth || !innerHeight) return;   // o xem truoc bi an
-  // may quay bay / bam theo
-  if (fly) {
+  // may quay bay / bam theo (tour dien anh dang chay thi tour cam may)
+  if (TOUR.on) tourTick(dt);
+  else if (fly) {
     fly.t += dt; const k = ease(Math.min(1, fly.t / fly.d));
     controls.target.lerpVectors(fly.t0, fly.t1, k); camera.position.lerpVectors(fly.p0, fly.p1, k);
     if (fly.t >= fly.d) fly = null;
@@ -2185,10 +2204,10 @@ function frame() {
     const p = follow.w.root.position.clone().add(new V3(0, 1, 0)), d = p.sub(controls.target).multiplyScalar(Math.min(1, dt * 4));
     controls.target.add(d); camera.position.add(d);
   }
-  controls.update();
+  if (!TOUR.on) controls.update();
   for (const w of [...workers.values()]) w.tick(dt, t);
   if (director) director.tick(dt, t);
-  tickGiaiTri(dt, t);
+  tickGiaiTri(dt, t); tickFx(dt, t); tourTuBat();
   // man hinh: ve lai 6 lan/giay
   screenT += dt;
   if (screenT > .16) {
@@ -2244,6 +2263,267 @@ function frame() {
     const fps = fpsN / fpsAcc; fpsAcc = fpsN = fpsT = 0;
     if (!qualityManual && fps < FPS_MAX * .8 && quality > 0) { if (++lowStreak >= 2) { quality--; lowStreak = 0; applyQuality(); } } else lowStreak = 0;
   }
+}
+
+// =====================================================================================================
+// DIEN ANH: den am ban dem, hat vi mo, bieu cam nhan vat, may quay tu hanh. Moi thu deu gom hinh / dung chung,
+// khong tao mesh moi trong vong lap ve (tru sprite hieu ung gan theo nguoi, tao mot lan moi nguoi).
+// =====================================================================================================
+const texTron = (stops, size = 64) => canvasTex(size, size, (g, W, H) => {
+  const gr = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2);
+  for (const [k, c] of stops) gr.addColorStop(k, c);
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+});
+const TEX_HAT = texTron([[0, "rgba(255,255,255,1)"], [.45, "rgba(255,255,255,.55)"], [1, "rgba(255,255,255,0)"]]);
+const TEX_VANG = texTron([[0, "rgba(255,236,190,.9)"], [.35, "rgba(255,220,160,.45)"], [1, "rgba(255,210,150,0)"]], 128);
+
+// ---------- 1. den noi that am ban dem ----------
+// <= 4 PointLight (khong do bong, tam ngan, decay 2) + vang sang tron tren san (InstancedMesh cong mau, khong ton bong)
+const DEN = [0, 1, 2, 3].map(() => { const l = new THREE.PointLight("#ffe8b3", 0, 9, 2); l.visible = false; scene.add(l); return l; });
+let vangDen = null, demK = 0;
+const MAT_VANG = new THREE.MeshBasicMaterial({ map: TEX_VANG, color: "#ffd99a", transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+function buildVangDen(xG) {
+  if (vangDen) { scene.remove(vangDen); vangDen.dispose(); }
+  const pts = [];
+  for (let x = 1.5; x < xG - GW; x += 3) pts.push([x, 0, 2.6]);                       // hanh lang
+  for (const rm of realRooms()) for (const u of [-RW / 4, RW / 4]) { const p = rm.w(u, RD * .55); pts.push([p.x, p.z, 3.4]); }
+  for (const [x, z] of [[-5, 0], [-6.4, 5.4 + LZ], [-5.5, -ZB + 2.2], [-8, -3]]) pts.push([x, z, 3.2]);   // sanh
+  for (const [dx, z] of [[3.5, 0], [3.0, -4.2], [3.5, 4.2]]) pts.push([GD.x0 + dx, z, 3.4]);           // phong Sep
+  vangDen = new THREE.InstancedMesh(UNIT.plane, MAT_VANG, pts.length);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  pts.forEach(([x, z, s], i) => vangDen.setMatrixAt(i, m.compose(new V3(x, .014, z), q, new V3(s, s, 1))));
+  vangDen.renderOrder = 1; scene.add(vangDen);
+  const xE = xG - GW;   // den that: sanh, phong Sep, 2 diem hanh lang
+  [[-5, 2.5, 0], [GD.x0 + GW / 2, 2.5, 0], [xE * .3, 2.5, 0], [xE * .7, 2.5, 0]].forEach((p, i) => DEN[i].position.set(...p));
+  denDem(tod());
+}
+function denDem(t) {
+  // len dan tu chieu toi, sang nhat khi dem (night > 0.4); chat luong Thap thi chi giu vang sang, tat den that
+  demK = clamp(t.night * 1.6 + Math.max(0, 1.2 - t.sun) * .35, 0, 1);
+  const bat = demK > .05 && quality > 0;
+  for (const l of DEN) { if (l.visible !== bat) l.visible = bat; l.intensity = demK * 14; }   // doi so den -> bien dich lai shader, chi luc doi buoi
+  MAT_VANG.opacity = demK * .8;
+}
+
+// ---------- 2. hat vi mo: khoi ca phe, bui nang / dom dom ----------
+function diemHat(n, size, blending) {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3).fill(-100), 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(n * 4), 4));   // RGBA: alpha tung hat
+  const mat = new THREE.PointsMaterial({ size, map: TEX_HAT, vertexColors: true, transparent: true, depthWrite: false, blending, sizeAttenuation: true });
+  const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; scene.add(pts);
+  return { pts, pos: geo.attributes.position, col: geo.attributes.color, n };
+}
+class HatVanPhong {
+  constructor() {
+    this.khoi = diemHat(48, .07, THREE.NormalBlending);        // 8 ly x 6 hat
+    this.khoiHat = Array.from({ length: 48 }, (_, i) => ({ src: i % 8, age: Math.random() * 2.4, ph: Math.random() * TAU }));
+    this.ly = []; this.lyT = 0;
+    this.bui = diemHat(48, .04, THREE.NormalBlending);
+    this.buiHat = Array.from({ length: 48 }, () => ({ x: 0, y: 0, z: 0, ph: Math.random() * TAU, sp: .5 + Math.random() }));
+    this.dem = -1; this.rai = false;
+  }
+  // ly dang co nguoi ngoi lam + ly co dinh (ban Sep, ban tra goc giai tri, quay an uong, ban sanh); toi da 8
+  chonLy() {
+    const ds = [new V3(GD.x0 + GD_DESK + .25, .92, -.75), new V3(GD.x0 + 2.4, .56, -3.95), new V3(-6.6, 1.06, -ZB + .45), new V3(-6.2, .57, 5.3 + LZ)];
+    for (const w of workers.values()) if (w.slot && w.slot.mug && w.step && w.step.k === "work" && w.a.status !== "loi") ds.unshift(w.slot.mug);
+    this.ly = ds.slice(0, 8);
+  }
+  doiGio(t) {
+    const dem = t.night > .5 ? 1 : 0;
+    if (dem === this.dem && this.rai) return;
+    this.dem = dem; this.rai = true;
+    // ngay: bui li ti lo lung trong nha (canh vach kinh); dem: dom dom quanh hang cay ngoai san
+    this.bui.pts.material.size = dem ? .18 : .035;
+    this.bui.pts.material.blending = dem ? THREE.AdditiveBlending : THREE.NormalBlending;
+    const xE = ncol * RW + GW;
+    for (const h of this.buiHat) {
+      if (dem) { h.x = -LOBBY - 4 + Math.random() * (xE + LOBBY + 8); h.z = (Math.random() < .5 ? -1 : 1) * (ZB + 3 + Math.random() * 3); h.y = .3 + Math.random() * 2.2; }
+      else { h.x = -LOBBY + 1 + Math.random() * (xE + LOBBY - 2); h.z = (Math.random() < .5 ? -1 : 1) * (ZB - .4 - Math.random() * 2.5); h.y = .6 + Math.random() * 1.8; }
+    }
+  }
+  tick(dt, t) {
+    if ((this.lyT -= dt) <= 0) { this.lyT = 4; this.chonLy(); }
+    const kp = this.khoi.pos.array, kc = this.khoi.col.array;
+    this.khoiHat.forEach((h, i) => {
+      h.age += dt * (.8 + (i % 3) * .1);
+      const ly = this.ly[h.src];
+      if (!ly) { kp[i * 3 + 1] = -100; return; }
+      if (h.age > 2.4) { h.age = 0; h.ph = Math.random() * TAU; }
+      const k = h.age / 2.4, r = .012 + k * .035;   // bay len ~28 cm, xoan oc, no dan roi tan
+      kp[i * 3] = ly.x + Math.sin(h.age * 3.2 + h.ph) * r; kp[i * 3 + 1] = ly.y + k * .28; kp[i * 3 + 2] = ly.z + Math.cos(h.age * 3.2 + h.ph) * r;
+      kc.set([1, 1, 1, Math.sin(k * Math.PI) * .32], i * 4);
+    });
+    this.khoi.pos.needsUpdate = true; this.khoi.col.needsUpdate = true;
+    const bp = this.bui.pos.array, bc = this.bui.col.array, dem = this.dem === 1;
+    this.buiHat.forEach((h, i) => {
+      const x = h.x + Math.sin(t * .15 * h.sp + h.ph) * .6, y = h.y + Math.sin(t * .23 * h.sp + h.ph * 2) * .25, z = h.z + Math.cos(t * .12 * h.sp + h.ph) * .4;
+      bp.set([x, y, z], i * 3);
+      if (dem) { const nh = Math.max(0, Math.sin(t * 1.7 * h.sp + h.ph)); bc.set([.85, 1, .35, nh * nh], i * 4); }
+      else bc.set([1, .97, .9, .22 + .12 * Math.sin(t * 2 * h.sp + h.ph)], i * 4);
+    });
+    this.bui.pos.needsUpdate = true; this.bui.col.needsUpdate = true;
+  }
+}
+const hat = new HatVanPhong();
+
+// may in / photocopy goc sanh: nop bai -> tia laser xanh quet ngang, day mot to giay ra khay
+const mayIn = { cho: 0, t: -1, q: null, giay: null, tia: null, den: null, xep: 0,
+  in() { this.cho = Math.min(3, this.cho + 1); },
+  tick(dt) {
+    if (!this.tia) return;
+    if (this.t < 0) { if (!this.cho) return; this.cho--; this.t = 0; }
+    this.t += dt;
+    const t = this.t, mx = this.q;
+    // 0..0.9 s quet; 0.9..1.7 s giay chay ra; 1.7..3 s nam tren khay
+    this.tia.visible = t < .9; this.tia.position.z = mx.z + .22 - (t / .9) * .44;
+    this.tia.material.opacity = .6 + .4 * Math.sin(t * 40);
+    this.quang.visible = this.tia.visible; this.quang.position.set(mx.x, .7, this.tia.position.z); this.quang.material.opacity = .5 + .3 * Math.sin(t * 40);
+    this.den.material.color.set(t < 1.7 ? (Math.sin(t * 18) > 0 ? "#4ade80" : "#14532d") : "#4ade80");
+    this.giay.visible = t > .9;
+    const k = clamp((t - .9) / .8, 0, 1); this.giay.position.set(mx.x - .12, .63 - k * .01, mx.z - .12 - ease(k) * .3);
+    if (t > 3) {   // to giay vao xap tren khay (toi da 5 to roi don)
+      this.t = -1; this.giay.visible = false; this.xep = (this.xep + 1) % 6;
+      this.chong.visible = this.xep > 0; this.chong.scale.y = .004 * this.xep; this.chong.position.y = .613 + .002 * this.xep;
+    }
+  } };
+function buildMayIn(B) {
+  const x = -3.3, z = ZB - .5;
+  mayIn.q = new V3(x, 0, z);
+  wallXZ("shell", x - .4, z - .35, x + .4, z + .3);
+  B.box(MAT.white, .72, .58, .55, x, .29, z); B.box(std("#9aa3ad", .5, .2), .74, .04, .57, x, .6, z);   // than + mat may
+  B.box(MAT.plastic, .7, .05, .5, x, .66, z + .02); B.box(std("#dfe3e8", .4), .72, .05, .54, x, .78, z + .02, 0, .12);   // kinh quet + nap he mo (thay tia quet)
+  B.box(MAT.metal, .06, .1, .04, x - .3, .72, z + .27); B.box(MAT.metal, .06, .1, .04, x + .3, .72, z + .27);                // ban le
+  B.box(MAT.plastic, .2, .04, .12, x + .24, .64, z - .3, 0, -.4);                                                   // bang dieu khien
+  B.box(std("#cfd5dc", .5), .34, .02, .3, x - .12, .6, z - .38);                                                    // khay giay ra
+  B.box(MAT.metal, .74, .06, .5, x, .03, z);
+  const tia = new THREE.Mesh(UNIT.box, new THREE.MeshBasicMaterial({ color: "#4ade80", transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  tia.scale.set(.74, .014, .035); tia.position.set(x, .695, z); tia.visible = false; shell.add(tia);
+  const quang = new THREE.Mesh(UNIT.plane, new THREE.MeshBasicMaterial({ map: TEX_HAT, color: "#4ade80", transparent: true, opacity: .8, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  quang.scale.set(.95, .2, 1); quang.rotation.x = -Math.PI / 2; quang.visible = false; shell.add(quang);   // vang sang xanh quanh tia
+  const giay = new THREE.Mesh(UNIT.box, MAT.paper); giay.scale.set(.21, .004, .29); giay.visible = false; shell.add(giay);
+  const den = new THREE.Mesh(UNIT.sph, new THREE.MeshBasicMaterial({ color: "#4ade80", toneMapped: false })); den.scale.setScalar(.012); den.position.set(x + .3, .67, z - .33); shell.add(den);
+  const chong = new THREE.Mesh(UNIT.box, MAT.paper); chong.scale.set(.21, .001, .29); chong.position.set(x - .12, .615, z - .38); chong.visible = false; shell.add(chong);   // xap giay da in tren khay
+  Object.assign(mayIn, { tia, quang, giay, den, chong, xep: 0, t: -1 });
+}
+
+// ---------- 3. bieu cam: may set khi loi, phao giay khi xong, man hinh hat sang len mat ----------
+const TEX_MAY = [false, true].map(set => canvasTex(128, 128, (g, W, H) => {
+  g.fillStyle = "#6b7280";
+  for (const [cx, cy, r] of [[42, 62, 24], [66, 50, 30], [90, 64, 22], [64, 72, 26]]) { g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.fill(); }
+  g.fillStyle = "#9ca3af"; g.beginPath(); g.arc(60, 46, 16, 0, TAU); g.fill();
+  if (set) { g.fillStyle = "#fde047"; g.strokeStyle = "#a16207"; g.lineWidth = 3; g.beginPath();
+    g.moveTo(70, 70); g.lineTo(52, 100); g.lineTo(64, 100); g.lineTo(54, 126); g.lineTo(82, 92); g.lineTo(69, 92); g.lineTo(80, 70); g.closePath(); g.fill(); g.stroke(); }
+}));
+const PHAO = diemHat(160, .09, THREE.NormalBlending);
+const phaoHat = Array.from({ length: 160 }, () => ({ age: 9, v: new V3(), p: new V3(), c: [1, 1, 1] }));
+const MAU_PHAO = ["#f43f5e", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#facc15", "#06b6d4"].map(c => new THREE.Color(c));
+function phaoGiay(pos, n = 36) {
+  let dung = 0;
+  for (const h of phaoHat) {
+    if (h.age < 1.5) continue;
+    h.age = 0; h.p.set(pos.x, 1.6, pos.z);
+    const a = Math.random() * TAU, s = .6 + Math.random() * 1.2; h.v.set(Math.cos(a) * s, 1.3 + Math.random() * 1.4, Math.sin(a) * s);
+    const c = MAU_PHAO[Math.floor(Math.random() * MAU_PHAO.length)]; h.c = [c.r, c.g, c.b];
+    if (++dung >= n) break;
+  }
+}
+function fxDoiTrangThai(w, truoc, sau) {
+  if (sau === "xong") { phaoGiay(w.root.position); mayIn.in(); }
+}
+function fxBo(w) {
+  for (const k of ["fxSang", "fxMay"]) if (w[k]) { w[k].material.dispose(); w[k] = null; }
+}
+function tickFx(dt, t) {
+  const sangDem = .22 + demK * .4;
+  for (const w of workers.values()) {
+    // man hinh hat sang xanh ngoc len nua than tren khi dang go phim
+    const go = w.anim === "type" && w.a.status === "chay" && w.opacity > .9;
+    if (go && !w.fxSang) {
+      w.fxSang = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX_HAT, color: "#22d3ee", transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+      w.fxSang.scale.set(.36, .42, 1); w.fxSang.position.set(0, 1.1, .2); w.root.add(w.fxSang);
+    }
+    if (w.fxSang) { w.fxSang.visible = go; if (go) w.fxSang.material.opacity = sangDem * (.7 + .3 * Math.sin(t * 23 + w.ph) * Math.sin(t * 6.3 + w.ph)); }
+    // may xam + tia set tren dau khi gap truc trac
+    const loi = w.a.status === "loi" && w.mode === "desk";
+    if (loi && !w.fxMay) {
+      w.fxMay = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX_MAY[0], transparent: true, depthWrite: false }));
+      w.fxMay.scale.set(.42, .42, 1); w.fxMay.position.set(0, 2.32, 0); w.root.add(w.fxMay);
+    }
+    if (w.fxMay) {
+      w.fxMay.visible = loi;
+      if (loi) { const set = Math.sin(t * 9 + w.ph) > .55 || Math.sin(t * 2.3 + w.ph) > .93; w.fxMay.material.map = TEX_MAY[set ? 1 : 0]; w.fxMay.position.y = 2.32 + Math.sin(t * 1.6 + w.ph) * .04; }
+    }
+  }
+  // phao giay: roi theo trong luc, lac ngang, tat sau 1,5 s
+  const pp = PHAO.pos.array, pc = PHAO.col.array;
+  phaoHat.forEach((h, i) => {
+    if (h.age >= 1.5) { if (pp[i * 3 + 1] > -50) pp[i * 3 + 1] = -100; return; }
+    h.age += dt; h.v.y -= 6 * dt; h.v.multiplyScalar(1 - dt * 1.2);
+    h.p.addScaledVector(h.v, dt); if (h.p.y < .05) { h.p.y = .05; h.v.set(0, 0, 0); }
+    pp.set([h.p.x + Math.sin(h.age * 14 + i) * .02, h.p.y, h.p.z], i * 3);
+    pc.set([...h.c, h.age < 1.1 ? 1 : (1.5 - h.age) / .4], i * 4);
+  });
+  PHAO.pos.needsUpdate = true; PHAO.col.needsUpdate = true;
+  hat.tick(dt, t); mayIn.tick(dt);
+}
+
+// ---------- 4. may quay dien anh tu hanh (phim C, nut Tour, tu bat sau 90 giay khong dung chuot / phim) ----------
+const TOUR = { on: false, shot: null, t: 0, i: 0, look: new V3(), luu: null, tuDong: false };
+let chamCuoi = performance.now();
+function tourBat(on = !TOUR.on, tuDong = false) {
+  if (on === TOUR.on) return;
+  if (on && director && director.mode === "kiemtra") return;
+  TOUR.on = on; TOUR.tuDong = tuDong;
+  document.body.classList.toggle("cine", on); $("#btnCine").classList.toggle("on", on);
+  if (on) {
+    TOUR.luu = { pos: camera.position.clone(), target: controls.target.clone() };
+    follow(null); fly = null; controls.enabled = false; TOUR.i = Math.floor(Math.random() * 3); TOUR.shot = null;
+    feedNote(tuDong ? "🎬 Không ai đụng chuột 90 giây — bật tour điện ảnh · bấm chuột hoặc phím bất kỳ để thoát" : "🎬 Tour điện ảnh · bấm chuột hoặc phím bất kỳ để thoát");
+  } else {
+    controls.enabled = true; controls.target.copy(TOUR.look);
+    if (TOUR.luu) flyTo(TOUR.luu.target, TOUR.luu.pos, 1.4);   // tra may quay ve cho cu, em ai
+    downAt = null; chamCuoi = performance.now();
+  }
+}
+function chonCanh() {
+  const loai = ["diorama", "sep", "vai"][TOUR.i++ % 3], xE = ncol * RW + GW;
+  if (loai === "vai") {   // sau vai nguoi dang chay lenh hang nhat
+    const ws = [...workers.values()].filter(w => w.anim === "type" && w.a.status === "chay" && w.step && w.step.k === "work").sort((a, b) => (b.a.tools || 0) - (a.a.tools || 0));
+    if (!ws.length) return chonCanh();
+    const w = ws[0];
+    return { dur: 11, w, at: k => ({ pos: w.root.localToWorld(new V3(.32 - k * .1, 1.5 - k * .08, -.85 + k * .25)), look: w.root.localToWorld(new V3(.05, 1.08, .7)) }) };
+  }
+  if (loai === "sep") {   // goc sofa phong Sep: dia than quay -> nhin qua kinh ra cac phong
+    const x0 = GD.x0;
+    return { dur: 13, at: k => ({ pos: new V3(x0 + 4.35 - k * .7, 1.25 - k * .1, -3.05 - k * .45),
+      look: new V3().lerpVectors(new V3(x0 + 3.41, .7, -5.85), new V3(x0 - 6, 1.2, -1.5), ease(clamp((k - .3) / .6, 0, 1))) }) };
+  }
+  // ngang tam mat ngoai vach kinh, luot doc toa nha
+  const side = Math.random() < .5 ? -1 : 1, dir = Math.random() < .5 ? -1 : 1;
+  const xa = dir > 0 ? -LOBBY + 1 : xE - 1, xb = dir > 0 ? xE - 1 : -LOBBY + 1;
+  const cong = new THREE.CatmullRomCurve3([new V3(xa, 1.9, side * (ZB + 3.6)), new V3(xa + (xb - xa) * .35, 2.4, side * (ZB + 2.6)),
+    new V3(xa + (xb - xa) * .7, 2.1, side * (ZB + 3.0)), new V3(xb, 2.6, side * (ZB + 4))]);
+  return { dur: 18, at: k => { const p = cong.getPoint(k); return { pos: p, look: new V3(p.x + dir * 2.5, .9, side * (CW / 2 + RD * .35)) }; } };
+}
+function tourTick(dt) {
+  if (!TOUR.shot || TOUR.t >= TOUR.shot.dur || (TOUR.shot.w && !workers.has(TOUR.shot.w.id))) { TOUR.shot = chonCanh(); TOUR.t = 0; $("#cineFade").classList.add("on"); setTimeout(() => $("#cineFade").classList.remove("on"), 60); }
+  TOUR.t += dt;
+  const { pos, look } = TOUR.shot.at(clamp(TOUR.t / TOUR.shot.dur, 0, 1));
+  const cat = TOUR.t < dt * 1.5;   // khung dau canh moi: dat thang (man den che), sau do bam muot
+  camera.position.lerp(pos, cat ? 1 : Math.min(1, dt * 3)); TOUR.look.lerp(look, cat ? 1 : Math.min(1, dt * 3));
+  camera.lookAt(TOUR.look);
+}
+for (const ev of ["pointermove", "wheel", "touchstart"]) addEventListener(ev, () => { chamCuoi = performance.now(); }, { passive: true });
+addEventListener("pointerdown", e => { chamCuoi = performance.now(); if (TOUR.on) { tourBat(false); e.stopPropagation(); e.preventDefault(); } }, true);
+addEventListener("keydown", e => {
+  chamCuoi = performance.now();
+  if (TOUR.on) { tourBat(false); e.stopImmediatePropagation(); e.preventDefault(); return; }
+  if ((e.key === "c" || e.key === "C") && !e.target.matches?.("input,textarea") && !e.metaKey && !e.ctrlKey) { tourBat(true); e.stopImmediatePropagation(); }
+}, true);
+$("#btnCine").onclick = e => { e.stopPropagation(); tourBat(true); };
+function tourTuBat() {
+  if (!TOUR.on && !document.hidden && performance.now() - chamCuoi > 90000 && !(director && director.mode === "kiemtra") && !$("#pf").classList.contains("open")) tourBat(true, true);
 }
 
 // thanh tren cung xuong dong (cua so hep) -> danh sach phong + ho so lui xuong theo

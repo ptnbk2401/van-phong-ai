@@ -100,6 +100,13 @@ Phiên đã lưu trữ (archived) trong Claude app không được theo dõi
   trên máy (WebAudio, không cần mạng, không bản quyền).
 - Giao diện kính mờ: viên số liệu trên thanh trên, danh sách phòng thu gọn thành cột biểu tượng (rê chuột / 📌 để mở),
   bảng tin có nhãn màu, phím `H` ẩn toàn bộ giao diện để chỉ xem 3D. Phông nền chọn ở Cấu hình: sân cỏ hoặc studio tối.
+- **Ban đêm ấm cúng** (theo giờ thật): ngoài trời tối xanh lạnh, trong nhà bật đèn vàng và vầng sáng dưới đèn; màn hình
+  hắt sáng xanh ngọc lên người đang gõ phím. Thêm `?gio=22` vào địa chỉ để xem thử ban đêm.
+- **Hạt vi mô**: khói cà phê bốc lên ở bàn có người làm, bụi nắng ban ngày, đom đóm quanh hàng cây ban đêm; máy in ở sảnh
+  quét laser và in một tờ mỗi lần có người nộp báo cáo.
+- **Biểu cảm**: gặp trục trặc thì có mây xám ⚡ trên đầu, xong việc thì bung pháo giấy, chờ việc thì xoay ghế lắc lư.
+- **Tour điện ảnh** (phím `C`, nút 🎥 Tour, tự bật sau 90 giây không đụng chuột): máy quay tự đi qua 3 góc — lướt ngang
+  ngoài vách kính, góc sofa phòng Sếp, sau vai người đang chạy lệnh; bấm chuột hoặc phím bất kỳ để về chỗ cũ.
 
 ## Nền tảng
 

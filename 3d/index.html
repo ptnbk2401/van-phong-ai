@@ -64,6 +64,14 @@
   body.zen #top, body.zen #rooms, body.zen #feed, body.zen #hint, body.zen #pf { opacity:0; pointer-events:none; }
   body.zen #top { transform:translateY(-12px); } body.zen #rooms { transform:translateX(-12px); } body.zen #feed, body.zen #hint { transform:translateY(12px); }
   body.zen #zenOut { display:grid; place-items:center; }
+  /* tour dien anh: an HUD, 2 dai den kieu man anh rong, man den ngan khi chuyen canh */
+  body.cine #top, body.cine #rooms, body.cine #feed, body.cine #hint, body.cine #pf, body.cine #labels { opacity:0; pointer-events:none; }
+  #cineBar { position:fixed; inset:0; z-index:4; pointer-events:none; }
+  #cineBar::before, #cineBar::after { content:""; position:absolute; left:0; right:0; height:0; background:#000; transition:height .6s ease; }
+  #cineBar::before { top:0; } #cineBar::after { bottom:0; }
+  body.cine #cineBar::before, body.cine #cineBar::after { height:9vh; }
+  #cineFade { position:fixed; inset:0; z-index:4; background:#000; opacity:0; pointer-events:none; transition:opacity .45s ease; }
+  #cineFade.on { opacity:1; transition:none; }
 
   /* danh sach phong: thu gon thanh cot icon, re chuot / ghim de mo rong */
   #rooms { position:fixed; left:var(--gap); top:calc(var(--topH, 54px) + 26px); display:flex; flex-direction:column; gap:2px; z-index:2; padding:6px;
@@ -229,13 +237,15 @@
   <span class="grp">
     <a id="demoA" href="/3d?demo=1" title="Thêm nhân viên giả để xem đi lại, nộp hồ sơ"><button id="demoBtn">🎬</button></a>
     <a href="/" title="Bảng theo dõi 2D"><button>📋 <span class="tx">2D</span></button></a>
+    <button id="btnCine" title="Phím C: máy quay điện ảnh tự đi (tự bật sau 90 giây không đụng chuột)">🎥 <span class="tx">Tour</span></button>
     <button id="btnZen" class="ghost" title="Phím H: ẩn toàn bộ giao diện, chỉ xem 3D">👁️</button>
   </span>
 </div>
 <button id="zenOut" class="glass" title="Phím H: hiện lại giao diện">👁️</button>
+<div id="cineFade"></div><div id="cineBar"></div>
 <div id="rooms" class="glass thu"></div>
 <div id="feed" class="glass"><div class="h">Bảng tin</div><div id="feedList"></div></div>
-<div id="hint" class="glass"><span><kbd>🖱️ Kéo</kbd> Xoay</span><span><kbd>Chuột phải</kbd> Dời</span><span><kbd>Cuộn</kbd> Zoom</span><span><kbd>K</kbd> Đi tuần</span><span><kbd>1–9</kbd> Phòng</span><span><kbd>M</kbd> Nhạc</span><span><kbd>H</kbd> Ẩn/hiện UI</span><span><kbd>Esc</kbd> Thôi</span></div>
+<div id="hint" class="glass"><span><kbd>🖱️ Kéo</kbd> Xoay</span><span><kbd>Chuột phải</kbd> Dời</span><span><kbd>Cuộn</kbd> Zoom</span><span><kbd>K</kbd> Đi tuần</span><span><kbd>1–9</kbd> Phòng</span><span><kbd>M</kbd> Nhạc</span><span><kbd>C</kbd> Tour</span><span><kbd>H</kbd> Ẩn/hiện UI</span><span><kbd>Esc</kbd> Thôi</span></div>
 
 <div id="toast3d"></div>
 <div id="yt" class="glass"><div class="h"><span>🎵 Máy hát phòng Sếp</span><a href="/cauhinh" style="color:inherit">Sửa danh sách</a></div><div id="ytP"></div></div>
