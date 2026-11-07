@@ -106,7 +106,31 @@ Phiên đã lưu trữ (archived) trong Claude app không được theo dõi
   quét laser và in một tờ mỗi lần có người nộp báo cáo.
 - **Biểu cảm**: gặp trục trặc thì có mây xám ⚡ trên đầu, xong việc thì bung pháo giấy, chờ việc thì xoay ghế lắc lư.
 - **Tour điện ảnh** (phím `C`, nút 🎥 Tour, tự bật sau 90 giây không đụng chuột): máy quay tự đi qua 3 góc — lướt ngang
-  ngoài vách kính, góc sofa phòng Sếp, sau vai người đang chạy lệnh; bấm chuột hoặc phím bất kỳ để về chỗ cũ.
+  ngoài vách kính, góc sofa phòng Sếp, sau vai người đang chạy lệnh, bám theo robot hút bụi; bấm chuột hoặc phím bất kỳ
+  để về chỗ cũ.
+- **Đồ vật**: ghế công thái học (chân sao 5 nan, bánh xe, piston, lưng uốn 3 đoạn, tay vịn chữ T) xoay theo người ngồi,
+  ghế trống lệch góc như vừa đứng dậy; bàn có màn hình kép (ngang + dọc) hoặc màn cong ultra-wide, case PC viền LED RGB,
+  tai nghe, ống bút, lịch bàn, thùng rác; giấy note Kanban trên vách kính; trạm nước nóng lạnh + máy espresso ở sảnh.
+- **Nhân vật**: áo hoodie / áo in `>_` `λ`, dây đeo thẻ đung đưa khi đi, AirPods, đồng hồ thông minh; đổi dáng ngồi
+  (chống cằm, ngả lưng đan tay sau gáy) mỗi 30–45 giây, liếc sang màn hình bên; đi ngược chiều nhau thì gật đầu chào;
+  giờ nghỉ thì ra cây nước rót nước rồi về chỗ.
+- **Robot hút bụi** tuần tra hành lang và sảnh, gặp người hoặc vật cản thì lùi, xoay rồi chạy tiếp.
+
+## Live stream (cửa sổ không viền, macOS)
+
+```bash
+./live/chay.sh                       # cửa sổ 1280x720 không viền, mở /3d
+./live/chay.sh --size 1920x1080      # đổi cỡ (điểm ảnh logic; máy Retina ra gấp đôi)
+./live/chay.sh --url "http://127.0.0.1:8790/3d?gio=22"
+```
+
+Cần `python3 app.py` đang chạy. Lần đầu tự biên dịch `live/live.swift` bằng `swiftc` (Command Line Tools, không cài gì thêm).
+Kéo cửa sổ: giữ chuột trái trên cảnh 3D; đổi cỡ: kéo cạnh. `⌘R` tải lại, `⌘Q` thoát. Phím `H` ẩn giao diện để chỉ còn cảnh 3D.
+Trong OBS hoặc TikTok LIVE Studio: thêm nguồn **Thu cửa sổ (Window Capture)** → chọn "Văn phòng AI (live)". Phải mở cửa sổ
+trước rồi mới mở danh sách; phần mềm live cần quyền *Screen & System Audio Recording* trong System Settings → Privacy & Security.
+Cửa sổ hiện ở mọi Space. Đừng để cửa sổ bị che hẳn (WebKit ngừng vẽ khi bị che, hình đứng); `--top` giữ cửa sổ luôn ở trên
+cùng nhưng đưa nó lên tầng cửa sổ khác 0, vài phần mềm live không liệt kê tầng này. OBS còn có nguồn **Trình duyệt (Browser)**
+với địa chỉ `/3d`, không cần cửa sổ.
 
 ## Nền tảng
 

@@ -290,6 +290,17 @@ const MAT = {
   steel: std("#b9bec4", .25, .9), elevator: std("#a9aeb4", .22, .95), slab: std("#9c978f", .9), ground: std("#46a063", 1),
   plaza: std("#cdc3b0", .92), road: std("#3d4146", .95), screenOff: std("#0b0c0f", .25, .2),
 };
+// vat lieu do vat moi: dai LED RGB case PC (doi mau theo thoi gian, mot vat lieu cho moi case), giay note, but
+const MAT_RGB = new THREE.MeshStandardMaterial({ color: "#111", emissive: "#ff00aa", emissiveIntensity: 1.4, roughness: .3 });
+const MAT_NOTE = ["#fde047", "#f9a8d4", "#67e8f9", "#fdba74"].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: .8, emissive: c, emissiveIntensity: .12 }));
+const MAT_RGB_BUT = [std("#2563eb", .5), std("#dc2626", .5), std("#16a34a", .5)];
+const MAT_BUT_DA = new THREE.MeshBasicMaterial({ color: "#f8fafc", transparent: true, opacity: .85 });
+// phu kien nhan vat: the nhan vien, logo ao phong, man hinh dong ho (3 nhom nhay lech pha)
+const MAT_THE = std("#f8fafc", .4);
+const MAT_LOGO = [">_", "λ"].map(t => new THREE.MeshStandardMaterial({ transparent: true, roughness: .7, map: (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
+  g.fillStyle = "#f8fafc"; g.font = "700 40px ui-monospace, Menlo, monospace"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(t, 32, 34);
+  const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx; })() }));
+const MAT_DONG_HO = [0, 1, 2].map(() => new THREE.MeshStandardMaterial({ color: "#111", emissive: "#38bdf8", emissiveIntensity: .1, roughness: .3 }));
 const UNIT = {
   box: new THREE.BoxGeometry(1, 1, 1), cyl: new THREE.CylinderGeometry(1, 1, 1, 20), cyl8: new THREE.CylinderGeometry(1, 1, 1, 8),
   sph: new THREE.SphereGeometry(1, 18, 12), plane: new THREE.PlaneGeometry(1, 1), torus: new THREE.TorusGeometry(1, .18, 8, 20),
@@ -331,23 +342,57 @@ function plant(B, x, z, s = 1, r = Math.random) {
       .11 * s * t, h * .5, .018 * s, tilt, a, 0));
   }
 }
+// ghe cong thai hoc: chan sao 5 nan + banh xe, piston chrome, dem bo goc, lung uon 3 doan do cot song, tay vin chu T
 function chair(B, x, z, yaw, exec = false) {
   const c = Math.cos(yaw), s = Math.sin(yaw), P = (f, side) => [x + s * f + c * side, z + c * f - s * side];
-  // chan sao 5 canh + banh xe
+  const vai = exec ? MAT.leather : MAT.fabric;
+  B.cyl(MAT.chrome, .05, .05, x, .1, z);                                    // tam truc xoay
   for (let i = 0; i < 5; i++) {
-    const a = i / 5 * TAU;
-    B.box(MAT.metal, .3, .03, .04, x + Math.cos(a) * .15, .07, z - Math.sin(a) * .15, a);
-    B.sph(MAT.plastic, .028, .028, .028, x + Math.cos(a) * .29, .03, z - Math.sin(a) * .29);
+    const a = yaw + i / 5 * TAU + .3, ca = Math.cos(a), sa = Math.sin(a);
+    B.box(MAT.metal, .29, .035, .045, x + ca * .15, .085, z - sa * .15, a, 0, 0);
+    B.add(UNIT.cyl, MAT.plastic, M4(x + ca * .29, .03, z - sa * .29, .03, .025, .03, Math.PI / 2, a + Math.PI / 2, 0));   // banh xe
   }
-  B.cyl(MAT.chrome, .025, .32, x, .24, z);
-  B.box(exec ? MAT.leather : MAT.fabric, .5, .08, .5, x, SEAT_Y - .02, z, yaw);
-  const [bx, bz] = P(-.25, 0);
-  B.box(exec ? MAT.leather : MAT.fabric, .46, exec ? .78 : .55, .07, bx, exec ? .9 : .78, bz, yaw, -.12);
-  for (const sd of [-.24, .24]) {   // tay vin
-    const [ax, az] = P(0, sd);
-    B.box(MAT.plastic, .04, .03, .3, ax, .64, az, yaw);
-    B.box(MAT.metal, .03, .2, .03, ax, .54, az, yaw);
+  B.cyl(MAT.chrome, .022, .3, x, .26, z);                                   // piston khi nen
+  B.box(MAT.plastic, .22, .04, .2, x, SEAT_Y - .1, z, yaw);                 // co cau nghieng duoi dem
+  B.box(vai, .5, .07, .44, x, SEAT_Y - .03, z, yaw);                        // dem ngoi
+  { const [fx, fz] = P(.24, 0); B.box(vai, .5, .05, .07, fx, SEAT_Y - .06, fz, yaw, .5); }   // mep truoc cong xuong (thac nuoc)
+  { const [kx, kz] = P(-.25, 0); B.box(MAT.plastic, .07, .32, .04, kx, SEAT_Y + .1, kz, yaw, -.1); }   // khung noi dem - lung
+  const hb = exec ? 1.0 : .84;
+  for (const [f, y, h, rx, w] of [[-.27, .66, .22, -.02, .44], [-.29, hb - .08, .2, -.16, .46], [-.315, hb + .1, .17, -.28, .42]]) {   // lung: that lung -> giua -> vai
+    const [bx, bz] = P(f, 0); B.box(vai, w, h, .06, bx, y + (exec ? .08 : 0), bz, yaw, rx);
   }
+  if (exec) { const [hx, hz] = P(-.35, 0); B.box(vai, .3, .14, .07, hx, 1.3, hz, yaw, -.3); }   // tua dau ghe sep
+  for (const sd of [-.27, .27]) {   // tay vin chu T
+    const [ax, az] = P(-.02, sd);
+    B.box(MAT.plastic, .035, .2, .035, ax, SEAT_Y + .1, az, yaw);
+    B.box(MAT.plastic, .07, .025, .26, ax, SEAT_Y + .21, az, yaw);
+  }
+}
+// bang Kanban tren vach kinh ngan phong: 3 cot giay note so le + vai net mui ten but da trang (60% vach)
+function bangKanban(B, u, sd, r) {
+  if (r() > .6) return;
+  const v0 = 1.3 + r() * Math.max(0, RD - 4.6);
+  for (let c = 0; c < 3; c++) for (let k = 0; k < 2 + Math.floor(r() * 3); k++) {
+    const v = v0 + c * .55 + (r() - .5) * .08, y = 2.15 - k * .2 + (r() - .5) * .04;
+    B.box(MAT_NOTE[Math.floor(r() * MAT_NOTE.length)], .006, .15, .15, u, y, v, 0, (r() - .5) * .25, 0);
+  }
+  for (let c = 0; c < 3; c++) B.box(MAT_BUT_DA, .004, .012, .4, u - sd * .004, 2.32, v0 + c * .55);           // gach dau cot
+  const va = v0 + .25, vb = v0 + 1.35, y = 1.42;                                                               // mui ten "lam -> xong"
+  B.box(MAT_BUT_DA, .004, .01, vb - va, u - sd * .004, y, (va + vb) / 2);
+  for (const s2 of [-1, 1]) B.box(MAT_BUT_DA, .004, .01, .12, u - sd * .004, y + s2 * .03, vb - .05, 0, s2 * .5);
+}
+// ghe ban nhan vien: InstancedMesh moi phong (4 vat lieu = 4 luot ve) de xoay tung chiec ma khong tach mesh
+let GHE_MAU = null;
+function gheMau() {
+  if (GHE_MAU) return GHE_MAU;
+  const B = new Batch(); chair(B, 0, 0, 0);
+  GHE_MAU = [...B.m].map(([mat, list]) => { const g = mergeGeometries(list); list.forEach(x => x.dispose()); SHARED.add(g); return [mat, g]; });
+  return GHE_MAU;
+}
+const _gm = new THREE.Matrix4(), _gq = new THREE.Quaternion(), _gy = new V3(0, 1, 0), _g1 = new V3(1, 1, 1);
+function datGhe(g) {
+  _gm.compose(new V3(g.x, 0, g.z), _gq.setFromAxisAngle(_gy, g.yaw), _g1);
+  for (const im of g.ims) { im.setMatrixAt(g.i, _gm); im.instanceMatrix.needsUpdate = true; }
 }
 
 // man hinh may tinh: canvas rieng, ve lai khi nhan vien go phim
@@ -465,6 +510,7 @@ class Room {
       SB.box(MAT.glass, .02, WH - 1.09, RD, u, 1.09 + (WH - 1.09) / 2, RD / 2);
       SB.box(MAT.frame, .1, .05, RD, u, WH - .025, RD / 2);
       for (let v = 1.1; v < RD; v += 1.1) SB.box(MAT.frame, .08, WH - 1.09, .04, u, 1.09 + (WH - 1.09) / 2, v);
+      if (!meeting) bangKanban(SB, u - sd * .025, sd, rng(hash(this.dept) ^ (sd > 0 ? 77 : 33)));
       SB.build(sw);
       g.add(sw); cutWalls.push({ g: sw, side: this.side, kind: "side", room: this });
     }
@@ -514,31 +560,49 @@ class Room {
     carpet.scale.set(cB - cA, rB - rA, 1); carpet.rotation.x = -Math.PI / 2; carpet.position.set((cA + cB) / 2, .006, (rA + rB) / 2); carpet.receiveShadow = true;
     this.trong.add(carpet);
     // ban nhan vien 2 hang x 3 cot (ngoi quay mat +u, man hinh phia +u)
+    const gheO = [];
     for (let ri = 0; ri < ROWS.length; ri++) for (let ci = 0; ci < COLS.length; ci++) {
       const cu = COLS[ci], rv = ROWS[ri], du = cu + .75;
       B.box(MAT.deskTop, .78, .04, 1.2, du, .73, rv);
       for (const s of [-.56, .56]) B.box(MAT.metal, .7, .71, .04, du, .355, rv + s);
       B.box(MAT.white, .03, .36, 1.1, du + .37, .52, rv);                 // tam che chan
-      B.box(MAT.plastic, .2, .015, .26, du + .27, .755, rv);               // de man hinh
-      B.box(MAT.plastic, .04, .26, .06, du + .3, .88, rv);
-      B.box(MAT.plastic, .035, .37, .62, du + .3, 1.12, rv);              // vo man hinh
+      // man hinh: 50% don, 20% kep (ngang code + doc 9:16 xoay 15 do), 15% cong ultra-wide, con lai don
+      const kieu = r(), kep = kieu < .2, rong = kieu >= .2 && kieu < .35, mz = kep ? rv + .14 : rv;
+      B.box(MAT.plastic, .2, .015, rong ? .4 : .26, du + .27, .755, mz);   // de man hinh
+      B.box(MAT.plastic, .04, .26, .06, du + .3, .88, mz);
+      if (rong) for (const [dz, ry] of [[-.31, .2], [0, 0], [.31, -.2]]) B.box(MAT.plastic, .035, .37, .34, du + .3 - Math.abs(dz) * .18, 1.12, mz + dz, ry);   // vo cong
+      else B.box(MAT.plastic, .035, .37, .62, du + .3, 1.12, mz);         // vo man hinh
+      if (kep) {
+        B.box(MAT.plastic, .16, .015, .16, du + .24, .755, rv - .38); B.box(MAT.plastic, .04, .2, .05, du + .26, .85, rv - .38);
+        B.box(MAT.plastic, .035, .58, .36, du + .25, 1.17, rv - .4, .26);   // man doc
+      }
       B.box(MAT.keys, .15, .015, .42, du - .2, .755, rv);                 // ban phim
       B.box(MAT.plastic, .1, .02, .06, du - .2, .755, rv + .3);            // chuot
       let mug = null;
       if (r() < .7) { B.cyl(MAT.mug, .04, .1, du - .05, .8, rv - .42); B.cyl(MAT.coffee, .036, .005, du - .05, .85, rv - .42); mug = this.w(du - .05, rv - .42, .86); }
       if (r() < .6) for (let k = 0; k < 3 + r() * 5; k++) B.box(MAT.paper, .2, .004, .26, du + .05 + r() * .04, .754 + k * .005, rv + .37, r() * .3);
-      if (r() < .35) plant(B, du + .18, rv - .45, .26, r);
-      chair(B, cu, rv, Math.PI / 2);
+      const cay = !kep && r() < .35; if (cay) plant(B, du + .18, rv - .45, .26, r);
+      // phu kien ngau nhien theo hat giong phong: tai nghe, ong but, lich ban, thung rac duoi gam, case PC LED RGB
+      if (r() < .4) { B.add(UNIT.torus, MAT.plastic, M4(du + .12, .77, rv - .12, .075, .075, .09, Math.PI / 2, 0, 0)); for (const s2 of [-1, 1]) B.cyl(MAT.plastic, .035, .025, du + .12 + s2 * .075, .765, rv - .12); }
+      if (r() < .5) { B.cyl(MAT.metal, .03, .09, du + .2, .8, rv + .52); for (let k = 0; k < 3; k++) B.box(MAT_RGB_BUT[k], .008, .13, .008, du + .19 + k * .012, .86, rv + .51 + (k - 1) * .01, 0, (k - 1) * .15); }
+      if (!cay && !kep && r() < .45) { B.box(MAT.white, .03, .1, .14, du + .22, .8, rv - .5, 0, 0, -.35); B.box(MAT_NOTE[1], .005, .03, .14, du + .208, .83, rv - .5, 0, 0, -.35); }
+      if (r() < .55) { B.cyl(std("#5b6470", .6), .11, .26, du - .02, .13, rv - .38); for (let k = 0; k < 1 + Math.floor(r() * 2); k++) B.sph(MAT.paper, .035, .035, .035, du - .02 + (r() - .5) * .08, .27, rv - .38 + (r() - .5) * .08); }
+      if (r() < .6) { B.box(MAT.plastic, .38, .42, .19, du + .1, .21, rv + .32); B.box(MAT_RGB, .36, .012, .17, du + .1, .425, rv + .32); B.box(MAT_RGB, .012, .38, .012, du - .085, .21, rv + .235); }
+      gheO.push([cu, rv]);
       wallRect(this, this.w(du - .39, rv - .6), this.w(du + .39, rv + .6));
       const sc = makeScreen(hash(this.dept) + ri * 7 + ci);
-      const sm = new THREE.Mesh(UNIT.plane, sc.mat); sm.scale.set(.58, .33, 1);
-      sm.position.set(du + .28, 1.12, rv); sm.rotation.y = -Math.PI / 2; this.trong.add(sm);
+      const sm = new THREE.Mesh(UNIT.plane, sc.mat); sm.scale.set(rong ? .98 : .58, .33, 1);
+      sm.position.set(du + .28, 1.12, mz); sm.rotation.y = -Math.PI / 2; this.trong.add(sm);
+      if (kep) { const sm2 = new THREE.Mesh(UNIT.plane, sc.mat); sm2.scale.set(.32, .54, 1); sm2.position.set(du + .23, 1.17, rv - .405); sm2.rotation.y = -Math.PI / 2 + .26; this.trong.add(sm2); }   // man doc dung chung noi dung
       const via = [[cu - .65, rv], [cu - .65, LANE_V]];
       this.desks.push({
         spot: this.spot(cu, rv, 1, 0, via, { chair: true }), screen: sc, owner: null, idx: ri * COLS.length + ci, mug,
         check: this.spot(cu - .5, rv + .55, .7, -.5, [[cu - .65, rv + .55], [cu - .65, LANE_V]]),
       });
     }
+    // ghe ban nhan vien: moi phong 4 InstancedMesh; trong thi xoay lech +-12 do, co nguoi ngoi thi xoay theo nguoi
+    const ims = gheMau().map(([mat, geo]) => { const im = new THREE.InstancedMesh(geo, mat, gheO.length); im.castShadow = im.receiveShadow = true; this.trong.add(im); return im; });
+    this.desks.forEach((d, i) => { const off = ((hash(this.dept + i) % 2) ? 1 : -1) * (.12 + (hash(this.dept + i) % 9) / 100); d.ghe = { ims, i, x: gheO[i][0], z: gheO[i][1], yaw0: Math.PI / 2, off, yaw: Math.PI / 2 + off }; datGhe(d.ghe); });
     // ban truong phong (go oc cho) o goc trong
     const lu = -RW / 2 + 1.4, lv = RD - 1.5;
     B.box(MAT.walnut, 1.4, .05, .8, lu, .75, lv);
@@ -686,6 +750,7 @@ const lobSpot = (x, z, yaw, via, extra = {}) => ({ room: LOB, pos: [x, z], yaw, 
 const ZB = CW / 2 + RD;   // mep ngoai nha (z)
 const LZ = ZB - 8.3;      // phong khach sanh dich theo do sau nha (mau ve cho ZB 8,3)
 const ELEV = lobSpot(-LOBBY + .7, 0, Math.PI / 2, [[-LOBBY + 2.2, 0]]);
+const NUOC = lobSpot(-2.25, ZB - 1.0, 0, [[-2.25, ZB - 1.6], [-2.6, ZB - 1.6], [-2.6, 1.0]]);   // dung truoc cay nuoc canh may in
 const COFFEE = [lobSpot(-5.0, -ZB + 1.05, Math.PI, [[-5.0, -ZB + 1.6], [-3, -ZB + 1.6], [-3, -1.1]]),
   lobSpot(-5.9, -ZB + 1.05, Math.PI, [[-5.9, -ZB + 1.6], [-3, -ZB + 1.6], [-3, -1.1]]),
   lobSpot(-2.2, -ZB + 1.0, Math.PI, [[-2.2, -ZB + 1.6], [-2.2, -1.1]])].map(s => ({ spot: s, owner: null }));
@@ -803,7 +868,7 @@ function buildShell() {
   B.box(MAT.plastic, .36, .45, .38, -5.9, 1.17, -ZB + .4);
   for (let k = 0; k < 4; k++) B.cyl(MAT.mug, .04, .1, -6.6 + k * .12, .99, -ZB + .45);
   B.box(MAT.white, .7, 1.85, .65, -8.3, .925, -ZB + .4); B.box(MAT.chrome, .03, .5, .03, -8.0, 1.2, -ZB + .08);
-  B.cyl(MAT.white, .18, 1.0, -2.2, .5, -ZB + .35); B.cyl(new THREE.MeshStandardMaterial({ color: "#7dd3fc", transparent: true, opacity: .55, roughness: .1 }), .15, .42, -2.2, 1.21, -ZB + .35);
+  cayNuoc(B, -2.2, -ZB + .35, 0);
   // ghe ban nho goc an uong
   B.cyl(MAT.white, .45, .03, -5.5, .74, -3.6); B.cyl(MAT.metal, .04, .72, -5.5, .36, -3.6);
   for (const a of [0, 1, 2]) chair(B, -5.5 + Math.cos(a * 2.1) * .75, -3.6 + Math.sin(a * 2.1) * .75, -a * 2.1 - Math.PI / 2);
@@ -1227,6 +1292,10 @@ const GEO = {
   ring: new THREE.RingGeometry(.34, .42, 40), hitbox: new THREE.CylinderGeometry(.32, .32, 1.8, 8),
   mug: new THREE.CylinderGeometry(.04, .036, .1, 14), paper: new THREE.PlaneGeometry(.21, .29), folder: new THREE.BoxGeometry(.26, .33, .025),
   phone: new THREE.BoxGeometry(.075, .15, .012),
+  hood: new THREE.TorusGeometry(.105, .045, 8, 16, Math.PI),   // mu ao hoodie (nua vong) sau gay
+  daiRut: (() => { const a = new THREE.BoxGeometry(.006, .11, .006); const g = mergeGeometries([a.clone().translate(-.03, 0, 0), a.clone().translate(.03, 0, 0)]); return g; })(),
+  dayThe: (() => { const a = new THREE.BoxGeometry(.008, .16, .004); return mergeGeometries([a.clone().rotateZ(.42).translate(-.035, 0, 0), a.clone().rotateZ(-.42).translate(.035, 0, 0)]); })(),
+  airpods: (() => { const s = new THREE.SphereGeometry(.014, 8, 6); return mergeGeometries([s.clone().translate(-.124, -.02, .015), s.clone().translate(.124, -.02, .015)]); })(),
 };
 const CAPS = {};
 const capsule = (r, len) => CAPS[r + ":" + len] || (CAPS[r + ":" + len] = new THREE.CapsuleGeometry(r, Math.max(.001, len - 2 * r), 4, 12));
@@ -1251,12 +1320,23 @@ function makePerson(id, type, isLead, male = false) {
     const pin = add(P.spine, new THREE.Mesh(UNIT.sph, std("#f2c14e", .25, .9))); pin.scale.setScalar(.018); pin.position.set(.07, .38, .1);
     if (male) { const tie = add(P.spine, new THREE.Mesh(UNIT.box, std("#b91c1c", .5))); tie.scale.set(.03, .15, .012); tie.position.set(0, .32, .1); }
   } else {
-    const badge = add(P.spine, new THREE.Mesh(UNIT.box, std(ROLE_COLOR(type), .5))); badge.scale.set(.05, .065, .01); badge.position.set(-.06, .3, .1);
+    // ao kieu startup: hoodie co mu trum sau gay + 2 day rut, hoac ao phong in ky hieu >_ / λ
+    if (!male && r() < .35) {
+      const mu = nho(P.spine, new THREE.Mesh(GEO.hood, top)); mu.position.set(0, .44, -.06); mu.rotation.set(-.35, 0, 0);
+      nho(P.spine, new THREE.Mesh(GEO.daiRut, MAT.white)).position.set(0, .33, .098);
+    } else if (r() < .55) {
+      const lg = nho(P.spine, new THREE.Mesh(UNIT.plane, MAT_LOGO[Math.floor(r() * MAT_LOGO.length)])); lg.scale.set(.09, .09, 1); lg.position.set(.04, .3, .099);
+    }
+    // day deo the nhan vien: day chu V quanh co + the lung lang truoc nguc (dung dua khi di)
+    nho(P.spine, new THREE.Mesh(GEO.dayThe, std(ROLE_COLOR(type), .6))).position.set(0, .36, .1);
+    P.the = new THREE.Group(); P.the.position.set(0, .28, .108); P.spine.add(P.the);
+    const the = nho(P.the, new THREE.Mesh(UNIT.box, MAT_THE)); the.scale.set(.055, .075, .006); the.position.y = -.045;
   }
   P.neck = new THREE.Group(); P.neck.position.y = .48; P.spine.add(P.neck);
   add(P.neck, new THREE.Mesh(UNIT.cyl, skin)).scale.set(.042, .1, .042); P.neck.children[0].position.y = .03;
   P.head = new THREE.Group(); P.head.position.y = .17; P.neck.add(P.head);
   add(P.head, new THREE.Mesh(GEO.head, skin));
+  if (!isLead && r() < .4) nho(P.head, new THREE.Mesh(GEO.airpods, MAT.white));   // AirPods 2 ben tai
   const capM = add(P.head, new THREE.Mesh(hairStyle === "bob" ? GEO.bob : GEO.cap, hair)); capM.rotation.x = hairStyle === "bob" ? -.5 : hairStyle === "short" ? -.15 : -.36; if (hairStyle === "short") capM.scale.set(1.01, .9, 1.04); capM.position.set(0, .012, -.008);
   if (hairStyle === "long") { const m = add(P.head, new THREE.Mesh(UNIT.box, hair)); m.scale.set(.25, .34, .07); m.position.set(0, -.15, -.085); }
   if (hairStyle === "pony" || hairStyle === "braid") { P.tail = new THREE.Group(); P.tail.position.set(0, .03, -.125); P.head.add(P.tail); const m = nho(P.tail, limbMesh(hair, .045, hairStyle === "braid" ? .42 : .28, hairStyle === "braid" ? -.2 : -.13)); m.scale.z = .045; }
@@ -1281,6 +1361,8 @@ function makePerson(id, type, isLead, male = false) {
     add(kn, limbMesh(skin, .05, .4, -.19)).material = r() < .5 ? skin : bottom;
     const sm = nho(kn, new THREE.Mesh(GEO.shoe, shoe)); sm.position.set(0, -.39, .04);
   }
+  // dong ho thong minh co tay trai (man hinh thinh thoang sang)
+  if (r() < .5) { const dh = nho(P.lEl, new THREE.Mesh(UNIT.box, MAT_DONG_HO[Math.floor(r() * MAT_DONG_HO.length)])); dh.scale.set(.05, .035, .058); dh.position.set(0, -.22, .0); }
   // do cam tay
   const prop = (geo, mat, parent, pos, rot) => { const m = new THREE.Mesh(geo, mat); m.position.set(...pos); m.rotation.set(...rot); m.visible = false; parent.add(m); return m; };
   P.mug = prop(GEO.mug, MAT.mug.clone(), P.rHand, [0, .0, .03], [Math.PI / 2, 0, 0]);
@@ -1301,7 +1383,11 @@ const SIT = { hipY: SEAT_Y + .06, lHpX: -1.48, rHpX: -1.48, lKnX: 1.45, rKnX: 1.
 const sinp = (t, f, p = 0) => Math.sin(t * f + p);
 const POSE = {
   stand: (t, w) => ({ spX: .02 * sinp(t, 1.3), nkY: .25 * sinp(t, .25, w.ph) }),
-  type: (t, w) => ({ ...SIT, lShX: -.72, rShX: -.72, lShZ: -.16, rShZ: .16, lElX: -1.0 + .09 * sinp(t, 17, w.ph), rElX: -1.0 + .09 * sinp(t, 17, w.ph + 2), nkX: .14 + .03 * sinp(t, 2.2), spX: .06, nkY: .08 * sinp(t, .4, w.ph) }),
+  type: (t, w) => ({ ...SIT, lShX: -.72, rShX: -.72, lShZ: -.16, rShZ: .16, lElX: -1.0 + .09 * sinp(t, 17, w.ph), rElX: -1.0 + .09 * sinp(t, 17, w.ph + 2), nkX: .14 + .03 * sinp(t, 2.2), spX: .06,
+    nkY: .08 * sinp(t, .4, w.ph) + .2 * Math.tanh(3 * sinp(t, .21, w.ph * 3)) }),   // thinh thoang liec sang man ben canh
+  // doi dang ngoi: chong cam (tay trai do cam, nghieng dau, tay phai re chuot) / dan tay sau gay ngả lung
+  chongcam: (t, w) => ({ ...SIT, spX: .14, lShX: -1.45, lShZ: -.05, lElX: -2.35, rShX: -.62, rShZ: .14, rElX: -1.05 + .05 * sinp(t, 1.3, w.ph), nkX: .2, nkY: .1, spZ: .07 }),
+  ngalung: (t, w) => ({ ...SIT, spX: -.3, lShX: -2.7, rShX: -2.7, lShZ: .55, rShZ: -.55, lElX: -2.3, rElX: -2.3, nkX: -.18 + .04 * sinp(t, .7, w.ph), nkY: .15 * sinp(t, .3, w.ph) }),
   peer: (t, w) => ({ ...SIT, spX: .16, nkX: .22, lShX: -.7, lElX: -1.05, lShZ: -.15, rShX: -.62, rShZ: .14, rElX: -1.0 + .15 * Math.max(0, sinp(t, 1.7, w.ph)), nkY: .15 * sinp(t, .5, w.ph) }),
   read: (t, w) => ({ ...SIT, lShX: -1.0, rShX: -1.0, lShZ: -.3, rShZ: .3, lElX: -1.25, rElX: -1.25, nkX: .38 + .04 * sinp(t, .8), spX: -.05, nkY: .1 * sinp(t, .3, w.ph) }),
   think: (t, w) => ({ ...SIT, rShX: -1.3, rShZ: .32, rElX: -2.25, lShX: -.62, lShZ: -.12, lElX: -1.1, nkX: .02, nkY: .18 * sinp(t, .35, w.ph), spZ: .05, spX: .05 }),
@@ -1324,7 +1410,7 @@ const POSE = {
   gdassign: (t, w) => ({ ...SIT, rShX: -1.0 + .25 * sinp(t, 3), rElX: -.6, rShZ: -.1, lShX: -.7, lElX: -1.2, lShZ: -.15, nkY: .1 * sinp(t, 1.5), spX: .05 }),
   ghost: (t, w) => ({ hipY: .92 + .06 * sinp(t, 1.6, w.ph), lShX: -.2, rShX: -.2, lShZ: .5, rShZ: -.5, lElX: -.4, rElX: -.4, nkX: .3, lHpX: -.1, rHpX: .1, lKnX: .4, rKnX: .4 }),
 };
-const SIT_ANIMS = new Set(["type", "peer", "read", "think", "wait", "stretch", "error", "sofa", "phone", "choduyet", "gdlisten", "gdassign"]);
+const SIT_ANIMS = new Set(["type", "peer", "read", "think", "wait", "stretch", "error", "sofa", "phone", "choduyet", "gdlisten", "gdassign", "chongcam", "ngalung"]);
 const PROPS = { wait: ["mug"], coffee: ["mug"], read: ["paper"], sofa: ["phone"], place: ["folder"], phone: ["phone"], report: ["folder"], choduyet: ["folder"], xephang: ["phone"] };
 
 function animFromAct(act) {
@@ -1471,6 +1557,13 @@ class Worker {
       } else if (this.a.status === "loi") this.plan.push({ k: "act", anim: "talk", dur: 1.5 });
       this.plan.push({ k: "walk", spot: ELEV }, { k: "vanish" });
     } else if (m === "gone") { this.freeSlot(); this.plan.push({ k: "vanish" }); }
+    else if (m === "lounge") {   // nghi giai lao: ra cay nuoc o sanh rot ly nuoc, cam ve cho ngoi nhap tung ngum
+      const s = this.deskSlot();
+      if (instant && s) this.place(s.spot);
+      this.plan.push({ k: "walk", spot: NUOC }, { k: "act", anim: "coffee", dur: 3.5 });
+      if (s) this.plan.push({ k: "walk", spot: s.spot }, { k: "act", anim: "wait", dur: 40 + Math.random() * 40 });
+      this.plan.push({ k: "fn", fn: () => { if (this.mode === "lounge") { this.mode = ""; this.setMode("lounge"); } } });
+    }
   }
   remove() {
     fxBo(this);
@@ -1550,7 +1643,14 @@ class Worker {
     }
     if (this.slot && !this.slot.spot.chair) return a.status === "cho" ? "coffee" : "talk";
     if (a.status === "cho") return this.isLead && a.helpers ? "think" : "wait";
-    return animFromAct(a.act);
+    const an = animFromAct(a.act);
+    // moi 30-45 giay doi dang ngoi 5-8 giay (chong cam / ngả lung dan tay sau gay) roi go tiep
+    if (SIT_ANIMS.has(an) && this.slot && this.slot.spot.chair) {
+      if (!this.doiDang) this.doiDang = tNow + 30 + Math.random() * 15;
+      if (tNow > this.doiDang) { this.dang = Math.random() < .55 ? "chongcam" : "ngalung"; this.dangHet = tNow + 5 + Math.random() * 3; this.doiDang = tNow + 30 + Math.random() * 15; }
+      if (this.dang && tNow < this.dangHet) return this.dang;
+    }
+    return an;
   }
   excursion() {
     const a = this.a, rm = this.room(); if (!rm) return null;
@@ -1576,6 +1676,12 @@ class Worker {
       Object.assign(tgt, walkTgt(this, dt));
       if (this.carry) Object.assign(tgt, { rShX: -.3, rElX: -1.25, rShZ: .1 });
     }
+    if (this.chao && tNow < this.chao.het) {   // gat dau chao nguoi di nguoc chieu: quay dau ve phia ho + cui nhe
+      const o = this.chao.ai.root.position, p = this.root.position, k = 1 - (this.chao.het - tNow) / .9;
+      let goc = Math.atan2(o.x - p.x, o.z - p.z) - this.yawNow; goc = ((goc + Math.PI) % TAU + TAU) % TAU - Math.PI;
+      tgt.nkY = clamp(goc, -.9, .9); tgt.nkX = (tgt.nkX || 0) + .38 * Math.sin(Math.min(1, k * 1.6) * Math.PI);
+    }
+    if (this.P.the) this.P.the.rotation.x = moving ? .25 * Math.sin(this.walkPh * 2) : this.P.the.rotation.x * .9;   // the nhan vien dung dua
     applyJoints(this, dt, tgt, anim, moving);
     const P = this.P;
     P.ring.material.color.set(ST_COLOR[this.a.status] || "#94a3b8");
@@ -2175,6 +2281,8 @@ function hideLoad() { $("#load").classList.add("hide"); }
 const timer = new THREE.Timer();
 // dat may quay theo toa do phong Sep (dx = met tinh tu mep tay phong) — de chup kiem tu dong: window.__vpNhinGD(dx, z, cao, xa)
 window.__vpNhin = (px, py, pz, tx, ty, tz) => { fly = null; follow(null); controls.target.set(tx, ty, tz); camera.position.set(px, py, pz); controls.update(); };
+window.__vpRoomba = () => ({ x: roomba.g.position.x, z: roomba.g.position.z, tt: roomba.tt });
+window.__vpBan = (ir, id, du = -1.3, dv = 1.6, h = 1.9) => { const rm = realRooms()[ir], d = rm && rm.desks[id]; if (!d) return null; const p = rm.w(d.ghe.x + du, d.ghe.z + dv, h), q = rm.w(d.ghe.x + .9, d.ghe.z, .8); window.__vpNhin(p.x, p.y, p.z, q.x, q.y, q.z); return rm.desks.length; };
 window.__vpThu = { loi: () => { const w = window.__vpThu.w; if (w) { w.a = { ...w.a, status: "loi" }; } }, nguoi: () => { const w = window.__vpThu.w = [...workers.values()].find(x => x.a.status === "loi" && x.mode === "desk") || [...workers.values()].find(x => x.anim === "type"); if (!w) return null; const p = w.root.localToWorld(new V3(1.8, 2.3, 2.3)), q = w.root.position; window.__vpNhin(p.x, p.y, p.z, q.x, 1.6, q.z); return w.a.status + "/" + w.anim; }, phao: () => { const w = window.__vpThu.w || [...workers.values()][0]; if (w) phaoGiay(w.root.position, 40); }, in: () => mayIn.in(), tour: () => tourBat(true) };
 window.__vpNhinGD = (dx, z, h = 3, d = 4) => { fly = null; follow(null); controls.target.set(GD.x0 + dx, .6, z); camera.position.set(GD.x0 + dx - d * .6, h, z + d * .8); controls.update(); };
 // so lieu chan doan (bo nho GPU, so nhan vien) — goi tu console / kiem tu dong: window.__vpChanDoan()
@@ -2387,9 +2495,26 @@ const mayIn = { cho: 0, t: -1, q: null, giay: null, tia: null, den: null, xep: 0
       this.chong.visible = this.xep > 0; this.chong.scale.y = .004 * this.xep; this.chong.position.y = .613 + .002 * this.xep;
     }
   } };
+// cay nuoc nong lanh: than trang, binh 20 L xanh trong up nguoc, 2 voi gat do (nong) / xanh (lanh), khay hung
+const MAT_BINH = new THREE.MeshStandardMaterial({ color: "#60a5fa", transparent: true, opacity: .55, roughness: .08, metalness: .1 });
+function cayNuoc(B, x, z, yaw) {
+  const f = yaw === 0 ? 1 : -1;   // mat truoc quay vao trong nha (+z khi yaw 0)
+  B.box(MAT.white, .32, .95, .32, x, .475, z); B.box(MAT.plastic, .3, .03, .3, x, .965, z);
+  B.cyl(MAT_BINH, .14, .38, x, 1.18, z); B.cyl(MAT_BINH, .05, .06, x, .99, z); B.cyl(MAT_BINH, .12, .02, x, 1.38, z);
+  B.box(MAT.plastic, .22, .1, .04, x, .74, z + f * .17);
+  B.box(std("#dc2626", .4), .03, .04, .03, x - .05, .72, z + f * .2); B.box(std("#2563eb", .4), .03, .04, .03, x + .05, .72, z + f * .2);
+  B.box(MAT.metal, .2, .02, .08, x, .55, z + f * .2);
+}
 function buildMayIn(B) {
   const x = -3.3, z = ZB - .5;
   mayIn.q = new V3(x, 0, z);
+  // tram pantry canh may in: cay nuoc + ke go nho voi may espresso tu dong (den LED man hinh mini)
+  cayNuoc(B, x + 1.05, z + .1, Math.PI); wallXZ("shell", x + .85, z - .1, x + 1.25, z + .3);
+  B.box(MAT.walnut, .62, .82, .42, x - 1.05, .41, z + .05); wallXZ("shell", x - 1.38, z - .2, x - .72, z + .3);
+  B.box(MAT.plastic, .3, .38, .3, x - 1.05, 1.01, z + .05); B.box(MAT.chrome, .26, .05, .14, x - 1.05, .86, z - .07);
+  B.box(MAT.chrome, .06, .1, .06, x - 1.05, .99, z - .12); B.cyl(MAT.mug, .035, .07, x - 1.05, .9, z - .1);
+  B.box(new THREE.MeshBasicMaterial({ color: "#22d3ee", toneMapped: false }), .1, .04, .005, x - 1.05, 1.13, z - .101);
+  for (let k = 0; k < 4; k++) B.cyl(MAT.mug, .035, .08, x - 1.25 + k * .1, .86, z + .18);
   wallXZ("shell", x - .4, z - .35, x + .4, z + .3);
   B.box(MAT.white, .72, .58, .55, x, .29, z); B.box(std("#9aa3ad", .5, .2), .74, .04, .57, x, .6, z);   // than + mat may
   B.box(MAT.plastic, .7, .05, .5, x, .66, z + .02); B.box(std("#dfe3e8", .4), .72, .05, .54, x, .78, z + .02, 0, .12);   // kinh quet + nap he mo (thay tia quet)
@@ -2466,7 +2591,71 @@ function tickFx(dt, t) {
   });
   PHAO.pos.needsUpdate = true; PHAO.col.needsUpdate = true;
   hat.tick(dt, t); mayIn.tick(dt);
+  tickGhe(dt); tickChao(t); roomba.tick(dt, t);
+  // LED RGB case PC doi mau cham; dong ho thong minh thinh thoang sang (3 nhom lech pha)
+  MAT_RGB.emissive.setHSL((t * .05) % 1, 1, .5);
+  MAT_DONG_HO.forEach((m, i) => { m.emissiveIntensity = Math.sin(t * .37 + i * 2.1) > .93 ? 1.6 : .1; });
 }
+// ghe ban: co nguoi ngoi -> xoay theo than nguoi (ca luc lac lu cho viec); trong -> lech +-12 do nhu vua dung day
+function tickGhe(dt) {
+  for (const rm of realRooms()) for (const d of rm.desks) {
+    const g = d.ghe; if (!g) continue;
+    const w = d.owner, ngoi = w && w.spot === d.spot && SIT_ANIMS.has(w.anim);
+    const dich = ngoi ? g.yaw0 + (w.root.rotation.y - d.spot.yaw) : g.yaw0 + g.off;
+    const dy = dich - g.yaw;
+    if (Math.abs(dy) > .002) { g.yaw += dy * Math.min(1, dt * (ngoi ? 10 : 3)); datGhe(g); }
+  }
+}
+// hai nguoi di nguoc chieu nhau < 1,5 m o hanh lang -> ca hai quay dau gat chao (moi cap 25 giay mot lan)
+const daChao = new Map();
+function tickChao(t) {
+  const di = [...workers.values()].filter(w => w.anim === "walk");
+  for (let i = 0; i < di.length; i++) for (let j = i + 1; j < di.length; j++) {
+    const a = di[i], b = di[j], d = a.root.position.distanceTo(b.root.position);
+    if (d > 1.5 || d < .3) continue;
+    if (Math.sin(a.yawNow) * Math.sin(b.yawNow) + Math.cos(a.yawNow) * Math.cos(b.yawNow) > -.3) continue;   // khong nguoc chieu
+    const k = a.id < b.id ? a.id + b.id : b.id + a.id;
+    if (t - (daChao.get(k) || -99) < 25) continue;
+    daChao.set(k, t);
+    a.chao = { ai: b, het: tNow + .9 }; b.chao = { ai: a, het: tNow + .9 };
+    if (Math.random() < .35) a.noi(["Chào nha! 👋", "Hi bạn!", "Đi đâu vội thế?", "Cà phê không?"][Math.floor(Math.random() * 4)], 1.8);
+  }
+}
+// ---------- robot hut bui Roomba: tuan tra hanh lang + sanh, gap nguoi / vat can < 0,5 m thi lui, xoay 45-90 do ----------
+const roomba = (() => {
+  const g = new THREE.Group();
+  const than = new THREE.Mesh(new THREE.CylinderGeometry(.19, .19, .07, 32), std("#f1f5f9", .35, .1)); than.position.y = .045; than.castShadow = true; g.add(than);
+  const mat = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .012, 32), std("#1e293b", .15, .3)); mat.position.y = .085; g.add(mat);
+  const can = new THREE.Mesh(new THREE.TorusGeometry(.19, .018, 8, 24, Math.PI), std("#334155", .5)); can.rotation.set(Math.PI / 2, 0, 0); can.position.y = .04; g.add(can);   // vien chong va phia truoc
+  const led = new THREE.Mesh(new THREE.CircleGeometry(.03, 20), new THREE.MeshBasicMaterial({ color: "#22c55e", toneMapped: false })); led.rotation.x = -Math.PI / 2; led.position.y = .092; g.add(led);
+  const choi = new THREE.Group(); choi.position.set(.13, .012, .12); g.add(choi);   // choi canh quay
+  for (let k = 0; k < 3; k++) { const n = new THREE.Mesh(UNIT.box, std("#94a3b8", .6)); n.scale.set(.09, .004, .01); n.rotation.y = k * TAU / 3; n.position.set(Math.cos(k * TAU / 3) * .04, 0, -Math.sin(k * TAU / 3) * .04); choi.add(n); }
+  g.position.set(-3, 0, .6); scene.add(g);
+  const R = { g, led, choi, huong: 0, tt: "chay", t: 0, xoay: 0, i: 0,
+    diem() {   // vong tuan tra: sanh -> doc hanh lang -> truoc phong Sep -> quay ve
+      const xE = ncol * RW;
+      return [[-3.5, -.9], [-1.5, 1.1], [xE * .25, -.8], [xE * .5, .8], [xE * .75, -.8], [Math.max(1, xE - 1.2), .4], [xE * .6, -.4], [xE * .3, .6], [-1.2, -.7], [-4.5, 1.2]];
+    },
+    tick(dt, t) {
+      const p = g.position, pts = this.diem(), tg = pts[this.i % pts.length];
+      this.led.material.color.setHSL(.36, .9, .35 + .2 * Math.sin(t * 3));
+      this.choi.rotation.y += dt * 14;
+      const fx = Math.sin(this.huong), fz = Math.cos(this.huong);
+      if (this.tt === "lui") { p.x -= fx * .18 * dt; p.z -= fz * .18 * dt; if ((this.t -= dt) <= 0) { this.tt = "xoay"; this.t = .7; this.xoay = (Math.random() < .5 ? -1 : 1) * (Math.PI / 4 + Math.random() * Math.PI / 4); } }
+      else if (this.tt === "xoay") { this.huong += this.xoay * dt / .7; if ((this.t -= dt) <= 0) { this.tt = "chay"; this.t = 2.5; } }
+      else {
+        // lai dan ve diem tuan tra ke tiep (sau khi ne thi chay thang them chut roi moi lai)
+        if ((this.t -= dt) <= 0) { let dh = Math.atan2(tg[0] - p.x, tg[1] - p.z) - this.huong; dh = ((dh + Math.PI) % TAU + TAU) % TAU - Math.PI; this.huong += clamp(dh, -dt * 1.8, dt * 1.8); }
+        const nx = p.x + fx * .45, nz = p.z + fz * .45;
+        const nguoi = [...workers.values()].some(w => Math.hypot(w.root.position.x - nx, w.root.position.z - nz) < .5) || (director && Math.hypot(director.root.position.x - nx, director.root.position.z - nz) < .5);
+        if (nguoi || blocked(nx, nz, .12) || Math.abs(nz) > CW / 2 - .25 && nx > 0) { this.tt = "lui"; this.t = .5; }
+        else { p.x += fx * .32 * dt; p.z += fz * .32 * dt; }
+        if (Math.hypot(tg[0] - p.x, tg[1] - p.z) < .45) this.i++;
+      }
+      g.rotation.y = this.huong;
+    } };
+  return R;
+})();
 
 // ---------- 4. may quay dien anh tu hanh (phim C, nut Tour, tu bat sau 90 giay khong dung chuot / phim) ----------
 const TOUR = { on: false, shot: null, t: 0, i: 0, look: new V3(), luu: null, tuDong: false };
@@ -2487,7 +2676,11 @@ function tourBat(on = !TOUR.on, tuDong = false) {
   }
 }
 function chonCanh() {
-  const loai = ["diorama", "sep", "vai"][TOUR.i++ % 3], xE = ncol * RW + GW;
+  const loai = ["diorama", "sep", "vai", "roomba"][TOUR.i++ % 4], xE = ncol * RW + GW;
+  if (loai === "roomba") {   // may quay thap sat san bam sau robot hut bui
+    const g = roomba.g;
+    return { dur: 9, at: () => ({ pos: g.localToWorld(new V3(0, .45, -1.1)), look: g.localToWorld(new V3(0, .15, 1.2)) }) };
+  }
   if (loai === "vai") {   // sau vai nguoi dang chay lenh hang nhat
     const ws = [...workers.values()].filter(w => w.anim === "type" && w.a.status === "chay" && w.step && w.step.k === "work").sort((a, b) => (b.a.tools || 0) - (a.a.tools || 0));
     if (!ws.length) return chonCanh();
