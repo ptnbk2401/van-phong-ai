@@ -1631,6 +1631,8 @@ def sach_cau_hinh(khoa, v):
             out["thoai"] = v["thoai"]
         if v.get("toc_do") in ("cham", "vua", "nhanh", "rat_nhanh"):
             out["toc_do"] = v["toc_do"]
+        if v.get("nen") in ("co", "studio"):
+            out["nen"] = v["nen"]
         if v.get("fps") in (20, 30, 60):
             out["fps"] = v["fps"]
         if isinstance(v.get("tu_dong"), bool):

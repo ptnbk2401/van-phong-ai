@@ -51,7 +51,7 @@ let GIAM_DOC = "Sếp";
 // Bang logo o sanh ban 3D: dong chu lon + dong nho (de trong dong 2 = ten xuong)
 let BIEN_SANH = { dong1: "VĂN PHÒNG AI", dong2: "" };
 // Bo cuc ban 3D: co phong ban (hep/vua/rong), hang cho viec (phut, so nguoi), muc noi cua nhan vat
-let BO_CUC = { phong: "rong", hang_phut: 5, hang_max: 5, thoai: "vua", toc_do: "vua", fps: 30, tu_dong: false };
+let BO_CUC = { phong: "rong", hang_phut: 5, hang_max: 5, thoai: "vua", toc_do: "vua", fps: 30, tu_dong: false, nen: "co" };
 // Phong ban dong tay (nut khoa o danh sach phong ban 3D): danh sach khoa phong
 let PHONG_DONG = [];
 // Pham vi theo doi: "ytb" = chi du an goc (ten khoa cu giu nguyen), "tat_ca" = moi phien Claude Code tren may (moi du an mot phong)

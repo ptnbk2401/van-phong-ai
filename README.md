@@ -95,6 +95,11 @@ Phiên đã lưu trữ (archived) trong Claude app không được theo dõi
 - Sếp tự đi kiểm tra: ghé mỗi phòng có người một lần, chào nhân viên, bỏ qua phòng trống, xong tự về bàn.
 - Trang Cấu hình: cỡ phòng (hẹp / vừa / rộng), hàng chờ, mức nói, tốc độ nhân vật, giới hạn FPS, đóng / mở phòng ban.
 - Đỡ nóng máy: giới hạn FPS, bóng đổ cập nhật thưa; `window.__vpChanDoan()` trong console để xem số liệu.
+- **Góc giải trí** ở phòng Sếp: sofa, loa, mâm đĩa than, máy hát. Bật / tắt nhạc bằng nút 🎵, phím `M` hoặc bấm máy hát.
+  Dán danh sách link YouTube (video, playlist) ở trang Cấu hình để phát lần lượt; để trống thì phát nhạc lofi tự sinh
+  trên máy (WebAudio, không cần mạng, không bản quyền).
+- Giao diện kính mờ: viên số liệu trên thanh trên, danh sách phòng thu gọn thành cột biểu tượng (rê chuột / 📌 để mở),
+  bảng tin có nhãn màu, phím `H` ẩn toàn bộ giao diện để chỉ xem 3D. Phông nền chọn ở Cấu hình: sân cỏ hoặc studio tối.
 
 ## Nền tảng
 

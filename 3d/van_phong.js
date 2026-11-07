@@ -131,7 +131,7 @@ const canvas = $("#c");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.06;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;   // r18x: PCF da mem san
 const scene = new THREE.Scene();
@@ -148,11 +148,11 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 scene.environmentIntensity = 0.6;
 
-const hemi = new THREE.HemisphereLight(0xdfeaff, 0x8a7a66, 0.6);
+const hemi = new THREE.HemisphereLight(0xe8f1ff, 0xa3967f, 0.6);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff1dc, 1.6);
 sun.castShadow = true;
-sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.025; sun.shadow.radius = 3;
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.025; sun.shadow.radius = 4;
 sun.shadow.autoUpdate = false;   // cap nhat thua trong vong lap (6 lan/giay)
 scene.add(sun, sun.target);
 
@@ -174,7 +174,7 @@ function applyQuality() {
     composer.addPass(gtao);
     composer.addPass(new OutputPass());
   }
-  $("#btnQ").textContent = "Hình: " + QN[quality];
+  $("#btnQ").innerHTML = `✨ <span class="tx">${QN[quality]}</span>`;
   resize();
 }
 function resize() {
@@ -287,8 +287,8 @@ const MAT = {
   leaf2: std("#5b8f3f", .6, 0, { side: THREE.DoubleSide }), trunk: std("#5a4433", .9), shelf: std("#f1ede6", .7),
   sofa: std("#5f7480", .95), sofa2: std("#c9b79c", .95), rack: std("#22252b", .45, .6), floorPlate: std("#bdb8b0", .3, .1),
   paper: std("#fbfbf8", .9, 0, { side: THREE.DoubleSide }), mug: std("#f7f5f0", .35), coffee: std("#3b2416", .3),
-  steel: std("#b9bec4", .25, .9), elevator: std("#a9aeb4", .22, .95), slab: std("#9c978f", .9), ground: std("#76815f", 1),
-  plaza: std("#b8b2a6", .95), road: std("#4a4d50", .95), screenOff: std("#0b0c0f", .25, .2),
+  steel: std("#b9bec4", .25, .9), elevator: std("#a9aeb4", .22, .95), slab: std("#9c978f", .9), ground: std("#46a063", 1),
+  plaza: std("#cdc3b0", .92), road: std("#3d4146", .95), screenOff: std("#0b0c0f", .25, .2),
 };
 const UNIT = {
   box: new THREE.BoxGeometry(1, 1, 1), cyl: new THREE.CylinderGeometry(1, 1, 1, 20), cyl8: new THREE.CylinderGeometry(1, 1, 1, 8),
@@ -500,7 +500,8 @@ class Room {
     const el = document.createElement("div"); el.className = "sign";
     el.onclick = () => focusRoom(this);
     this.signEl = el;
-    const so = new CSS2DObject(el); so.position.set(0, WH + .2, RD - .1); g.add(so);   // tren mep tuong trong cung, khong che ban ghe
+    el.onmouseenter = () => el.classList.add("hl"); el.onmouseleave = () => el.classList.remove("hl");
+    const so = new CSS2DObject(el); so.position.set(DOOR_U, 2.02, -.32); g.add(so);   // sat cua kinh phia hanh lang, thap hon tran, khong che ban ghe
   }
 
   build() {
@@ -1049,7 +1050,7 @@ const mayHat = new MayHat({ khung: document.getElementById("yt"), onDoi: veNutNh
 function veNutNhac() {
   const box = document.getElementById("nhacBox"); if (!box) return;
   box.classList.toggle("on", mayHat.bat); $("#nhacBtn").classList.toggle("on", mayHat.bat);
-  $("#nhacBtn").textContent = mayHat.bat ? "🎵 Đang phát" : "🎵 Nhạc";
+  $("#nhacBtn").innerHTML = mayHat.bat ? `⏸ <span class="tx">Đang phát</span>` : `🎵 <span class="tx">Nhạc</span>`;
   $("#nhacTen").textContent = mayHat.ten || ""; $("#nhacTen").title = mayHat.ten || "";
   if (mayHat.baoLoi) { feedNote(mayHat.baoLoi); mayHat.baoLoi = ""; }
 }
@@ -1147,6 +1148,12 @@ const sky = new THREE.Mesh(new THREE.CylinderGeometry(150, 150, 70, 64, 1, true)
 sky.geometry.translate(0, 33, 0);
 scene.add(sky);
 let skyNight = -1;
+// phong nen: "co" = san co tuoi + troi theo gio; "studio" = sa ban tren nen toi (khong troi, suong mo dan ra xa)
+const STUDIO = BC.nen === "studio";
+if (STUDIO) {
+  MAT.ground.color.set("#0d1117"); MAT.ground.roughness = .9; MAT.plaza.color.set("#1c232d"); MAT.road.color.set("#121821");
+  scene.fog = new THREE.Fog("#0d1117", 70, 170);
+}
 function drawSky(tod) {
   textCanvas(skyTex, (g, W, H) => {
     const gr = g.createLinearGradient(0, 0, 0, H);
@@ -1164,7 +1171,7 @@ function drawSky(tod) {
         x += bw + r() * 6;
       }
     }
-    g.fillStyle = tod.night > .5 ? "#0f1520" : "#6f7b5c"; g.fillRect(0, H * .86, W, H * .14);
+    g.fillStyle = tod.night > .5 ? "#0f1a16" : "#5aa86f"; g.fillRect(0, H * .86, W, H * .14);
   });
 }
 // gio trong ngay theo dong ho that
@@ -1185,7 +1192,8 @@ function tod() {
 function applyTod() {
   const t = tod();
   sun.intensity = t.sun; sun.color.set(t.sunCol); hemi.intensity = t.hemi; scene.environmentIntensity = t.env + t.night * .15;
-  scene.background = new THREE.Color(t.skyBot);
+  scene.background = STUDIO ? new THREE.Color("#0d1117") : new THREE.Color(t.skyBot);
+  sky.visible = !STUDIO;
   const n = t.night > .5 ? 1 : 0;
   if (n !== skyNight || !skyTex.userData.drawn) { drawSky(t); skyNight = n; skyTex.userData.drawn = 1; }
   for (const sc of SCREENS) sc.mat.emissiveIntensity = .8 + t.night * .5;
@@ -1633,15 +1641,15 @@ class Director {
     this.daTham = new Set(); this.daPhong = new Set(); this.phongNay = null;
     this.camYaw = 0; this.camDist = 4.6; this.camH = 2.3;
     this.noi(thoai("sep_di"), 3.5);
-    $("#btnKt").classList.add("on"); $("#btnKt").textContent = "🪑 Sếp về bàn";
-    $("#hint").textContent = "Sếp tự đi kiểm tra từng người đang làm · kéo chuột: xoay máy quay · cuộn: gần/xa · K / Esc: Sếp về bàn";
+    $("#btnKt").classList.add("on"); $("#btnKt").innerHTML = `🪑 <span class="tx">Sếp về bàn</span>`;
+    $("#hint").innerHTML = `<span>🚶 Sếp đang đi kiểm tra</span><span><kbd>🖱️ Kéo</kbd> Xoay máy quay</span><span><kbd>Cuộn</kbd> Gần / xa</span><span><kbd>K</kbd> <kbd>Esc</kbd> Sếp về bàn</span>`; hintSang();
   }
   stopInspect() {
     if (this.mode !== "kiemtra") return;
     this.path = null; this.target = null; this.waitUntil = 0;
     this.mode = "ve"; this.path = route(this.root.position, null, BOSS_SPOT); this.pi = 0;
-    $("#btnKt").classList.remove("on"); $("#btnKt").textContent = "🚶 Sếp đi kiểm tra";
-    $("#hint").textContent = HINT;
+    $("#btnKt").classList.remove("on"); $("#btnKt").innerHTML = `🚶 <span class="tx">Sếp đi kiểm tra</span>`;
+    $("#hint").innerHTML = HINT; hintSang();
   }
   // ---- Sep TU di kiem tra (khong dieu khien tay): ghe tung nhan vien dang lam, hoi tham, het nguoi thi di dao cac phong ----
   // Luot kiem tra: moi phong CO NGUOI vao dung 1 lan (gan truoc), chao tung nguoi dang lam trong phong; phong trong bo qua; het phong -> ve ban
@@ -1821,7 +1829,8 @@ function sync() {
     const ws = [...workers.values()].filter(w => w.room() === rm && w.mode === "desk");
     const run = ws.filter(w => w.a.status === "chay").length, wait = ws.filter(w => w.a.status === "cho").length;
     const [nm, motto, emo] = deptInfo(rm.dept);
-    rm.signEl.textContent = `${emo} ${nm}`;
+    const sh = `<i class="d"></i><span class="e">${emo}</span><span class="nm">${escRaw(nm)}</span>`;
+    if (rm.signEl.dataset.h !== sh) { rm.signEl.innerHTML = sh; rm.signEl.dataset.h = sh; }
     rm.signEl.title = `${run} đang cày · ${wait} ngồi đợi · ${rm.racks.length} máy chạy nền · ${rm.binders} hồ sơ`;
     rm.signEl.classList.toggle("hot", run > 0);
     // dong cua: phong dong tay hoac (tu dong) khong ai lam — co nguoi / may chay nen thi tu mo
@@ -1841,7 +1850,7 @@ Room.prototype.pendingPlace = function () {
 // ?demo=1: them nhan vien gia vao du lieu that de xem di lai (vao ca, lam, ra may, ca phe, nop ho so, ve)
 const DEMO = new URLSearchParams(location.search).has("demo");
 const demo = { list: [], n: 0, next: 0 };
-if (DEMO) { $("#demoA").href = "/3d"; $("#demoBtn").textContent = "🎬 Tắt chạy thử"; $("#demoBtn").classList.add("on"); }
+if (DEMO) { $("#demoA").href = "/3d"; $("#demoA").title = "Tắt chạy thử"; $("#demoBtn").textContent = "🎬 Tắt thử"; $("#demoBtn").classList.add("on"); }
 const DEMO_ACT = ["⌨️ Chạy python3 build.py", "📖 Đọc README.md", "✍️ Viết ghi_chu.md", "🔎 Tìm: lỗi đăng nhập", "🌐 Mở trang tài liệu", "🤔 Đang vắt óc suy nghĩ…", "🖼️ Xem ảnh chụp màn hình"];
 function demoInject(S) {
   const now = Date.now() / 1000, depts = realRooms().map(r => r.dept);
@@ -1901,11 +1910,12 @@ function renderStats() {
   const all = [...S.agents, ...S.leads];
   const run = all.filter(a => a.status === "chay").length, wait = all.filter(a => a.status === "cho").length;
   const done = Object.values(shelvesOf(S)).reduce((n, d) => n + d.hom_nay, 0);
-  $("#stat").innerHTML = `<span><i class="dot" style="background:var(--run)"></i><b>${run}</b> đang cày</span>
-    <span><i class="dot" style="background:var(--wait)"></i><b>${wait}</b> ngồi đợi</span>
-    <span>⏳ <b>${S.leads.filter(a => a.duyet).length}</b> chờ duyệt</span>
-    <span>⚙️ <b>${S.tasks.length}</b> máy chạy nền</span><span>📁 <b>${done}</b> hồ sơ hôm nay</span>
-    <span>🕒 ${hm(S.scanned)}</span>`;
+  const nd = S.leads.filter(a => a.duyet).length;
+  $("#stat").innerHTML = `<span class="mp${run ? " live" : ""}" style="--c:var(--run)" title="Nhân viên đang làm"><i class="g"></i><b>${run}</b> <span class="tx">Đang cày</span></span>
+    <span class="mp" style="--c:var(--wait)" title="Đang đợi máy chạy / đợi trợ lý"><i class="g"></i><b>${wait}</b> <span class="tx">Chờ việc</span></span>
+    <span class="mp" title="Trưởng phòng ngồi chờ sếp duyệt">⏳ <b>${nd}</b> <span class="tx">Chờ duyệt</span></span>
+    <span class="mp" title="Máy chạy nền">⚙️ <b>${S.tasks.length}</b> <span class="tx">Nền</span></span><span class="mp" title="Hồ sơ nộp hôm nay">📁 <b>${done}</b> <span class="tx">Hồ sơ</span></span>
+    <span class="mp time" title="Lần quét gần nhất">🕒 ${hm(S.scanned)}</span>`;
 }
 let feedKey = ""; const feedSeen = new Set();
 function renderFeed() {
@@ -1922,24 +1932,38 @@ function renderFeed() {
     if (e.kind === "giao") {
       const lead = S.leads.find(l => l.id === e.aid), ag = !lead && S.agents.find(x => x.id === e.aid);
       const boss = lead ? "👔 " + GIAM_DOC : ag ? staffOf(ag.parent || ag.sid)[0] || "Trưởng phòng" : "";
-      if (boss) return `<div class="fi${fresh ? " new" : ""}" data-id="${escRaw(e.aid)}">${f ? `<img src="/avatar/${f}.png" alt="">` : ""}<span class="t">${hm(e.ts)}</span><span class="x"><b>${escRaw(boss)}</b> 📣 giao việc cho <b>${escRaw(nm || "nhân viên")}</b></span></div>`;
+      if (boss) return `<div class="fi${fresh ? " new" : ""}" data-id="${escRaw(e.aid)}" style="--rc:#f59e0b">${f ? `<img src="/avatar/${f}.png" alt="">` : ""}<span class="x"><b>${escRaw(boss)}</b><span class="bdg giao">📣 giao việc</span> → <b>${escRaw(nm || "nhân viên")}</b></span><span class="t">${hm(e.ts)}</span></div>`;
     }
-    const what = e.kind === "giao" ? "📥 nhận việc mới" : e.kind === "noi" ? "📝 nộp báo cáo" : e.kind === "loi" ? "⚠️ gặp trục trặc" : TOOL_CHUNG(e.name || "");
-    return `<div class="fi${fresh ? " new" : ""}" data-id="${escRaw(e.aid)}">${f ? `<img src="/avatar/${f}.png" alt="">` : ""}<span class="t">${hm(e.ts)}</span><span class="x"><b>${escRaw(nm || "Nhân viên")}</b> ${what}</span></div>`;
+    const what = e.kind === "giao" ? "📥 nhận việc mới" : e.kind === "noi" ? "📄 nộp báo cáo" : e.kind === "loi" ? "⚠️ gặp trục trặc" : TOOL_CHUNG(e.name || "");
+    const loai = e.kind === "giao" ? "giao" : e.kind === "noi" ? "bc" : e.kind === "loi" ? "loi" : { "⌨": "lenh", "🌐": "web", "📖": "doc", "🔎": "doc", "✍": "viet", "📝": "viet", "👥": "giao" }[[...what][0]] || "";
+    const vai = S.leads.some(l => l.id === e.aid) ? "#f59e0b" : "#60a5fa";
+    return `<div class="fi${fresh ? " new" : ""}" data-id="${escRaw(e.aid)}" style="--rc:${vai}">${f ? `<img src="/avatar/${f}.png" alt="">` : ""}<span class="x"><b>${escRaw(nm || "Nhân viên")}</b><span class="bdg ${loai}">${what}</span></span><span class="t">${hm(e.ts)}</span></div>`;
   }).join("");
 }
 $("#feedList").onclick = e => { const it = e.target.closest("[data-id]"); if (it) { openPf(it.dataset.id); const w = workers.get(it.dataset.id); if (w) follow(w); } };
 function renderRoomList() {
   const rs = realRooms(), nw = S ? S.leads.filter(a => a.duyet).length : 0;
-  $("#rooms").innerHTML = `<button data-gd class="${focusR === "gd" ? "on" : ""}"><span class="k">G</span>🏛️ Phòng Giám Đốc<span class="n">${nw ? "⏳ " + nw : ""}</span></button>` + rs.map((rm, i) => {
+  const ghim = $("#rooms").classList.contains("thu") ? "📌" : "⇤";
+  $("#rooms").innerHTML = `<div class="rh"><span>Phòng ban</span><button id="roomsPin" class="ghost" title="${ghim === "📌" ? "Ghim mở rộng danh sách" : "Thu gọn thành cột biểu tượng"}">${ghim}</button></div>`
+    + `<button data-gd class="r${focusR === "gd" ? " on" : ""}" title="Phòng Giám Đốc (phím G)"><span class="e">🏛️${nw ? `<i style="--c:var(--wait)"></i>` : ""}</span><span class="t">Phòng Giám Đốc</span><span class="n">${nw ? "⏳ " + nw : ""}</span><span class="k">G</span></button>` + rs.map((rm, i) => {
     const [nm, , emo] = deptInfo(rm.dept);
-    const n = [...workers.values()].filter(w => w.room() === rm && w.mode === "desk").length;
+    const ws = [...workers.values()].filter(w => w.room() === rm && w.mode === "desk"), n = ws.length;
+    const c = rm.dong ? "" : ws.some(w => w.a.status === "chay") ? "var(--run)" : n ? "var(--wait)" : "";
     const tay = PHONG_DONG.includes(rm.dept);
     const khoa = `<span class="khoa${tay && !rm.dong ? " cho" : ""}" data-khoa="${i}" title="${rm.dong ? "Đang đóng — bấm để mở" : tay ? "Sẽ đóng khi hết người làm — bấm để thôi" : "Bấm để đóng phòng (khi không ai làm)"}">${rm.dong || tay ? "🔒" : "🔓"}</span>`;
-    return `<button data-r="${i}" class="${focusR === rm ? "on" : ""}${rm.dong ? " dong" : ""}"><span class="k">${i < 9 ? i + 1 : ""}</span>${emo} ${escRaw(nm)}<span class="n">${n || ""}</span>${khoa}</button>`;
+    if (rm.signEl) rm.signEl.classList.toggle("sel", focusR === rm);
+    return `<button data-r="${i}" class="r${focusR === rm ? " on" : ""}${rm.dong ? " dong" : ""}" title="${escRaw(nm)}${i < 9 ? " (phím " + (i + 1) + ")" : ""}"><span class="e">${emo}${c ? `<i style="--c:${c}"></i>` : ""}</span><span class="t">${escRaw(nm)}</span><span class="n">${n || ""}</span>${khoa}<span class="k">${i < 9 ? i + 1 : ""}</span></button>`;
   }).join("");
 }
+// re chuot tren danh sach phong -> bien ten phong do sang len
+$("#rooms").addEventListener("mouseover", e => { const b = e.target.closest("[data-r]"); for (const [i, rm] of realRooms().entries()) if (rm.signEl) rm.signEl.classList.toggle("hl", !!b && +b.dataset.r === i); });
+$("#rooms").addEventListener("mouseleave", () => { for (const rm of realRooms()) if (rm.signEl) rm.signEl.classList.remove("hl"); });
+try { if (localStorage.getItem("vp3d-rooms") === "mo") $("#rooms").classList.remove("thu"); } catch (e) {}
 $("#rooms").onclick = e => {
+  if (e.target.closest("#roomsPin")) {
+    const thu = !$("#rooms").classList.toggle("thu") ? "mo" : "thu"; try { localStorage.setItem("vp3d-rooms", thu); } catch (e2) {}
+    return renderRoomList();
+  }
   const k = e.target.closest("[data-khoa]");
   if (k) {   // dong / mo phong (luu kho de giu qua cac lan mo trang)
     const rm = realRooms()[+k.dataset.khoa]; if (!rm) return;
@@ -2000,13 +2024,15 @@ function loadPf() {
   if (!a) { box.innerHTML = `<p style="margin-top:30px;color:var(--dim)">Nhân viên này đã về.</p>`; return; }
   const [nm, nick] = staffOf(a.id), f = avFile(a.id), [dn, , emo] = deptInfo(a.dept);
   const end = a.status === "chay" || a.status === "cho" ? Date.now() / 1000 : (a.last || a.mtime);
-  box.innerHTML = `<div class="hd" style="--c:${ST_COLOR[a.status]}">${f ? `<img src="/avatar/${f}.png" alt="">` : ""}<div>
+  const song = a.status === "chay" || a.status === "cho" || a.duyet;
+  box.innerHTML = `<div class="hd" style="--c:${ST_COLOR[a.status]}">${f ? `<div class="av"><img src="/avatar/${f}.png" alt=""><i class="${song ? "live" : ""}" title="${escRaw(ST[a.status] || a.status)}"></i></div>` : ""}<div>
       <h2>${escRaw(nm || "Nhân viên")}${a.kind === "lead" ? " 👑" : ""}</h2><div class="who">${nick ? `“${escRaw(nick)}”` : ""}</div></div></div>
     <div class="pills"><span class="pill ${a.duyet ? "cho" : a.status}">${a.duyet ? "⏳ Chờ sếp duyệt" : ST[a.status] || a.status}</span><span class="pill">${escRaw(ROLE(a.type))}</span>
       <span class="pill">${emo} ${escRaw(dn)}</span>${a.cli && a.cli !== "claude" ? `<span class="pill">${a.cli === "codex" ? "🤖 Codex" : "✨ Antigravity"}</span>` : ""}</div>
-    <div style="font-weight:600;margin:10px 0 4px">${escRaw(a.duyet ? "⏳ Đang chờ sếp duyệt · đã chờ " + dur(Date.now() / 1000 - (a.mtime || Date.now() / 1000)) : actChung(a))}</div>
+    <div class="act1">${escRaw(a.duyet ? "⏳ Đang chờ sếp duyệt · đã chờ " + dur(Date.now() / 1000 - (a.mtime || Date.now() / 1000)) : actChung(a))}</div>
     <div class="row"><button id="pfFollow">🎥 Bám theo</button><button id="pfLo">${pfLo && pfLo.id === a.id ? "🙈 Ẩn nội dung" : a.duyet ? "👁 Xem đang chờ duyệt gì (riêng tư)" : "👁 Xem phiên (riêng tư)"}</button></div>
     ${pfLo && pfLo.id === a.id ? loHTML(a, pfLo.d) : ""}
+    <div class="sec">Số liệu ca làm</div>
     <div class="facts">
       <div class="fact"><div class="l">Vào ca</div><div class="v">${a.start ? hm(a.start) : "—"}</div></div>
       <div class="fact"><div class="l">Thời gian</div><div class="v">${dur(end - (a.start || end))}</div></div>
@@ -2037,22 +2063,22 @@ function gdPanel(box) {
   const gd = S.giamdoc || { hom_nay: {}, theo_phong: {} }, hn = gd.hom_nay || {}, now = Date.now() / 1000;
   const wait = S.leads.filter(a => a.duyet).sort((a, b) => a.mtime - b.mtime);
   const rows = Object.entries(gd.theo_phong).sort((a, b) => (b[1].giao + b[1].bao_cao) - (a[1].giao + a[1].bao_cao));
-  box.innerHTML = `<div class="hd" style="--c:#f2c14e"><img src="/logo/xuong_tron.png" alt=""><div><h2>🏛️ Phòng Giám Đốc</h2><div class="who">Giám đốc ${escRaw(GIAM_DOC)}</div></div></div>
+  box.innerHTML = `<div class="hd" style="--c:#f2c14e"><div class="av"><img src="/logo/xuong_tron.png" alt=""><i class="${wait.length ? "live" : ""}"></i></div><div><h2>🏛️ Phòng Giám Đốc</h2><div class="who">Giám đốc ${escRaw(GIAM_DOC)}</div></div></div>
     <div class="facts">
       <div class="fact"><div class="l">📣 Đầu việc sếp giao hôm nay</div><div class="v">${hn.giao || 0}</div></div>
       <div class="fact"><div class="l">📥 Báo cáo hôm nay</div><div class="v">${hn.bao_cao || 0}</div></div>
       <div class="fact"><div class="l">⏳ Xin duyệt hôm nay</div><div class="v">${hn.cho_duyet || 0}</div></div>
       <div class="fact"><div class="l">Đang ngồi chờ</div><div class="v">${wait.length}</div></div>
     </div>
-    <div style="color:var(--dim);margin:10px 0 4px">Đang chờ sếp duyệt</div>
+    <div class="sec">Đang chờ sếp duyệt</div>
     ${wait.length ? wait.map(a => { const [nm] = staffOf(a.id), f = avFile(a.id), [dn, , em] = deptInfo(a.dept);
       return `<div class="fi" data-id="${escRaw(a.id)}">${f ? `<img src="/avatar/${f}.png" alt="">` : ""}<span class="nm"><b>${escRaw(nm)}</b> · ${em} ${escRaw(dn)}</span><span class="t" style="margin-left:auto">${dur(now - a.mtime)}</span></div>`; }).join("")
       : `<div style="color:var(--dim)">Không ai chờ — sếp rảnh 🎉</div>`}
-    <div style="color:var(--dim);margin:14px 0 4px">📜 Sổ lệnh hôm nay (ai, phòng nào, lúc nào)</div>
+    <div class="sec">📜 Sổ lệnh hôm nay</div>
     <div class="tl">${(gd.nhat_ky || []).slice(0, 25).map(e => { const [nm] = staffOf(e.sid), f = avFile(e.sid), [dn, , em] = deptInfo(e.dept);
       const what = e.loai === "giao" ? `📣 Sếp giao một đầu việc cho <b>${escRaw(nm)}</b>` : e.loai === "bao_cao" ? `📥 <b>${escRaw(nm)}</b> báo cáo xong` : `⏳ <b>${escRaw(nm)}</b> xin duyệt`;
-      return `<div class="ev"><span class="tm">${hm(e.ts)}</span><span class="tx">${what} · ${em} ${escRaw(dn)}</span></div>`; }).join("") || `<div style="color:var(--dim)">Chưa có lệnh nào hôm nay.</div>`}</div>
-    <div style="color:var(--dim);margin:14px 0 4px">Theo phòng hôm nay</div>
+      return `<div class="ev ${e.loai}"><span class="tm">${hm(e.ts)}</span><span class="tx">${what} · ${em} ${escRaw(dn)}</span></div>`; }).join("") || `<div style="color:var(--dim)">Chưa có lệnh nào hôm nay.</div>`}</div>
+    <div class="sec">Theo phòng hôm nay</div>
     <div class="tl">${rows.map(([d, v]) => { const [dn, , em] = deptInfo(d);
       return `<div class="ev"><span class="tx">${em} ${escRaw(dn)}</span><span class="tm" style="margin-left:auto">📣 ${v.giao} · 📥 ${v.bao_cao} · ⏳ ${v.cho_duyet}</span></div>`; }).join("") || `<div style="color:var(--dim)">Chưa có.</div>`}</div>`;
   box.querySelectorAll("[data-id]").forEach(el => el.onclick = () => { const w = workers.get(el.dataset.id); openPf(el.dataset.id); if (w) follow(w); });
@@ -2085,6 +2111,7 @@ addEventListener("keydown", e => {
   if (director && director.mode === "kiemtra") {   // Sep dang tu di kiem tra: chi K / Esc de goi ve ban
     const k = e.key.toLowerCase();
     if (k === "escape" || k === "k") director.stopInspect();
+    else if (k === "h") zen();
     return;
   }
   if (e.key === "k" || e.key === "K") { if (director) director.startInspect(); return; }
@@ -2094,6 +2121,7 @@ addEventListener("keydown", e => {
   else if (e.key === "g" || e.key === "G") openGD();
   else if (e.key === "t" || e.key === "T") cycleWall();
   else if (e.key === "m" || e.key === "M") mayHat.batTat();
+  else if (e.key === "h" || e.key === "H") zen();
 });
 $("#nhacBtn").onclick = () => mayHat.batTat();
 $("#nhacSau").onclick = () => mayHat.baiSau();
@@ -2103,8 +2131,13 @@ function feedNote(text) {
   const el = document.getElementById("toast3d"); if (!el) return;
   el.textContent = text; el.classList.add("on"); clearTimeout(feedNote.t); feedNote.t = setTimeout(() => el.classList.remove("on"), 4000);
 }
-const HINT = $("#hint").textContent + " · K: sếp đi kiểm tra · M: nhạc";
-$("#hint").textContent = HINT;
+const HINT = $("#hint").innerHTML;
+// goi y phim: sang ro luc moi mo / re chuot, sau 5 giay mo di
+let hintT = 0; const hintSang = () => { $("#hint").classList.remove("mo"); clearTimeout(hintT); hintT = setTimeout(() => $("#hint").classList.add("mo"), 5000); };
+hintSang(); $("#hint").addEventListener("mouseleave", hintSang);
+// Zen: an / hien toan bo HUD 2D (phim H)
+function zen(on = !document.body.classList.contains("zen")) { document.body.classList.toggle("zen", on); }
+$("#btnZen").onclick = () => zen(true); $("#zenOut").onclick = () => zen(false);
 $("#btnKt").onclick = () => { if (!director) return; director.mode === "kiemtra" ? director.stopInspect() : director.startInspect(); };
 // keo chuot / cuon khi dang lai sep: xoay + doi khoang cach may quay
 canvas.addEventListener("pointermove", e => {
@@ -2113,11 +2146,11 @@ canvas.addEventListener("pointermove", e => {
 });
 canvas.addEventListener("wheel", e => { if (director && director.mode === "kiemtra") director.camDist = clamp(director.camDist + e.deltaY * .004, 2, 11); }, { passive: true });
 $("#btnAll").onclick = overview;
-const WALL = ["Tường: tự động", "Tường: thấp", "Tường: cao"];
+const WALL = ["🧱 <span class=\"tx\">Tự động</span>", "🧱 <span class=\"tx\">Tường thấp</span>", "🧱 <span class=\"tx\">Tường cao</span>"];
 let wallMode = 0;
 try { wallMode = +(localStorage.getItem("vp3d-wall") || 0); } catch (e) {}
-function cycleWall() { wallMode = (wallMode + 1) % 3; try { localStorage.setItem("vp3d-wall", wallMode); } catch (e) {} $("#btnWall").textContent = WALL[wallMode]; }
-$("#btnWall").textContent = WALL[wallMode];
+function cycleWall() { wallMode = (wallMode + 1) % 3; try { localStorage.setItem("vp3d-wall", wallMode); } catch (e) {} $("#btnWall").innerHTML = WALL[wallMode]; }
+$("#btnWall").innerHTML = WALL[wallMode];
 $("#btnWall").onclick = cycleWall;
 $("#btnQ").onclick = () => { quality = (quality + 1) % 3; qualityManual = true; try { localStorage.setItem("vp3d-q", quality); } catch (e) {} applyQuality(); };
 

@@ -72,6 +72,7 @@
       <label>Phòng không có người làm<select id="tu_dong"><option value="0">Để mở (đóng tay bằng nút 🔓 ở danh sách phòng 3D)</option><option value="1">Tự đóng — có người vào làm thì tự mở</option></select></label>
       <label>Khung hình tối đa (máy nóng thì giảm)<select id="fps"><option value="20">20 khung/giây — mát máy nhất</option><option value="30">30 khung/giây — mặc định</option><option value="60">60 khung/giây — mượt, nóng hơn</option></select></label>
       <label>Tốc độ nhân vật<select id="toc_do"><option value="cham">Chậm (×0,7)</option><option value="vua">Vừa (×1)</option><option value="nhanh">Nhanh (×1,4)</option><option value="rat_nhanh">Rất nhanh (×1,8)</option></select></label>
+      <label>Phông nền<select id="nen"><option value="co">Sân cỏ tươi + trời theo giờ thật</option><option value="studio">Studio tối — sa bàn nổi trên nền tối</option></select></label>
       <label>Nhân vật nói chuyện<select id="thoai"><option value="tat">Tắt</option><option value="it">Ít</option><option value="vua">Vừa</option><option value="nhieu">Nhiều</option></select></label>
     </div>
     <div class="bar"><button data-reset="bo_cuc">Về mặc định</button><button class="pri" data-save="bo_cuc">Lưu</button></div>
@@ -171,7 +172,7 @@ async function init() {
   const pv = document.querySelector(`input[name=pham_vi][value=${PHAM_VI}]`); if (pv) pv.checked = true;
   $("#nguon_codex").checked = !!NGUON.codex; $("#nguon_antigravity").checked = !!NGUON.antigravity;
   const r = document.querySelector(`input[name=phong][value=${BO_CUC.phong}]`); if (r) r.checked = true;
-  $("#hang_phut").value = BO_CUC.hang_phut; $("#hang_max").value = BO_CUC.hang_max; $("#thoai").value = BO_CUC.thoai; $("#toc_do").value = BO_CUC.toc_do || "vua"; $("#fps").value = String(BO_CUC.fps || 30); $("#tu_dong").value = BO_CUC.tu_dong ? "1" : "0";
+  $("#hang_phut").value = BO_CUC.hang_phut; $("#hang_max").value = BO_CUC.hang_max; $("#thoai").value = BO_CUC.thoai; $("#toc_do").value = BO_CUC.toc_do || "vua"; $("#fps").value = String(BO_CUC.fps || 30); $("#nen").value = BO_CUC.nen || "co"; $("#tu_dong").value = BO_CUC.tu_dong ? "1" : "0";
   $("#phong").innerHTML = depts.map(d => {
     const [nm, mt, em] = anonDept(d);
     return `<tr data-d="${esc(d)}"><td><input class="emo" value="${esc(em)}"></td><td><input value="${esc(nm)}"></td><td><input value="${esc(mt)}"></td>
@@ -221,7 +222,7 @@ function collect(khoa) {
   if (khoa === "pham_vi") { const v = (document.querySelector("input[name=pham_vi]:checked") || {}).value; return v && v !== MAC_DINH.pham_vi ? v : null; }
   if (khoa === "bo_cuc") {
     const v = { phong: (document.querySelector("input[name=phong]:checked") || {}).value || MAC_DINH.bo_cuc.phong,
-      hang_phut: +$("#hang_phut").value || MAC_DINH.bo_cuc.hang_phut, hang_max: +$("#hang_max").value || MAC_DINH.bo_cuc.hang_max, thoai: $("#thoai").value, toc_do: $("#toc_do").value, fps: +$("#fps").value, tu_dong: $("#tu_dong").value === "1" };
+      hang_phut: +$("#hang_phut").value || MAC_DINH.bo_cuc.hang_phut, hang_max: +$("#hang_max").value || MAC_DINH.bo_cuc.hang_max, thoai: $("#thoai").value, toc_do: $("#toc_do").value, fps: +$("#fps").value, tu_dong: $("#tu_dong").value === "1", nen: $("#nen").value };
     return JSON.stringify(v) === JSON.stringify(MAC_DINH.bo_cuc) ? null : v;
   }
   if (khoa === "xuong" || khoa === "giam_doc") { const v = $("#" + khoa).value.trim(); return v && v !== MAC_DINH[khoa] ? v : null; }
